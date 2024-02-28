@@ -30,3 +30,5 @@ def get_icd_codes(keyword, file='D_ICD_DIAGNOSES.csv'):
     print(f"ICD codes for {keyword}:")
     # row_id, icd_code
     print(icd_codes.head(5))
+
+    return icd_codes
