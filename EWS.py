@@ -16,7 +16,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 #Hyperparameters
 input_size = 1
-sequence_length = 4x
+sequence_length = 4
 num_layers = 2
 hidden_size = 256
 num_classes = 10
@@ -69,10 +69,12 @@ class CustomDataset(Dataset):
 
 
 
+
 #Load data
 path = "/Users/yurockheo/Desktop/Early-Warning-System/data/"
 df1 = pd.read_csv(path+"DIAGNOSES_ICD.csv")
 #df2 = pd.read_csv(path+"ICUSTAYS.csv")
+
 
 transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -81,9 +83,26 @@ transform = transforms.Compose([
 ])
 
 
-custom_dataset = CustomDataset(df1, transform=transform)
-train_loader = DataLoader(custom_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(custom_dataset, batch_size=batch_size, shuffle=True)
+#custom_dataset = CustomDataset(df1, transform=transform)
+#train_loader = DataLoader(custom_dataset, batch_size=batch_size, shuffle=True)
+#test_loader = DataLoader(custom_dataset, batch_size=batch_size, shuffle=True)
+
+
+#Extraction
+subjectIds = df1.loc[df1['icd9_code'] == icd9_code].loc[:,'subject_id'].tolist
+subjectIds = subjectIds.unique()
+print(subjectIds)
+
+#intimes = pd.to_datetime(df2['intime'])
+#outtimes = intimes+pd.Timedelta(hours=48)
+
+
+#Change icd9_code: 51881 => Acute repiratry failure
+icd9_code = "51881"
+
+
+
+
 
 # Initialize network
 model = RNN(input_size, hidden_size, num_layers, num_classes).to(device)
@@ -141,20 +160,7 @@ def check_accuracy(loader, model):
 
 check_accuracy(train_loader, model)
 check_accuracy(test_loader, model)
-
-
-#Extraction
-#subjectIds = df1.loc[df1['icd9_code'] == icd9_code].loc[:,'subject_id'].tolist
-#intimes = pd.to_datetime(df2['intime'])
-#outtimes = intimes+pd.Timedelta(hours=48)
-
-
-#Change icd9_code: 51881 => Acute repiratry failure
-icd9_code = "51881"
     
-
-
-
 
 
 def main():
