@@ -91,14 +91,31 @@ def patients_events(keyword):
 
 # aggregate events into hourly bins
 def aggregate_events(keyword):
+    # load dataframes
     df_patients = load_from_csv(f'patients_{keyword}')
     [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
 
-    print(f"Unique items in CHARTEVENTS with {keyword}:")
-    unique_column_df(df_chart_event, 'ITEMID')
+    # print(f"Unique items in CHARTEVENTS with {keyword}:")
+    # unique_column_df(df_chart_event, 'ITEMID')
 
-    print(f"Unique items in OUTPUTEVENTS with {keyword}:")
-    unique_column_df(df_output_event, 'ITEMID')
+    # print(f"Unique items in OUTPUTEVENTS with {keyword}:")
+    # unique_column_df(df_output_event, 'ITEMID')
 
-    print(f"Unique items in LABEVENTS with {keyword}:")
-    unique_column_df(df_lab_icu_specific, 'ITEMID')
+    # print(f"Unique items in LABEVENTS with {keyword}:")
+    # unique_column_df(df_lab_icu_specific, 'ITEMID')
+
+    # aggregate events by subjects
+    df_chart_patient = pd.merge(df_patients, df_chart_event, on='SUBJECT_ID', how='inner')
+    # print(f"Number of unique patients with {keyword}: {df_chart_patient['SUBJECT_ID'].nunique()}")
+    # print(f"Number of chart events with {keyword}: {df_chart_patient.shape[0]}")
+    # print(df_chart_patient.head(5))
+    df_output_patient = pd.merge(df_patients, df_output_event, on='SUBJECT_ID', how='inner')
+    # print(f"Number of unique patients with {keyword}: {df_output_patient['SUBJECT_ID'].nunique()}")
+    # print(f"Number of output events with {keyword}: {df_output_patient.shape[0]}")
+    # print(df_output_patient.head(5))
+    df_lab_patient = pd.merge(df_patients, df_lab_icu_specific, on='SUBJECT_ID', how='inner')
+    # print(f"Number of unique patients with {keyword}: {df_lab_patient['SUBJECT_ID'].nunique()}")
+    # print(f"Number of lab events with {keyword}: {df_lab_patient.shape[0]}")
+    # print(df_lab_patient.head(5))
+
+    
