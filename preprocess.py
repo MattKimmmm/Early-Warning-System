@@ -2,13 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-<<<<<<< HEAD
-import torch
-import torch.nn as nn
-from utils import read_csv, get_icd_codes, save_to_csv_multiple
-=======
 from utils import read_csv, get_icd_codes, save_to_csv_multiple, load_from_csv_multiple, unique_column_df, column_analytics_df, load_from_csv
->>>>>>> ccc94ed8b2b831265e333c2f708d03b0ef2075bf
 
 # aggregate patient/event tables for a given keyword (deterioration)
 def patients_events(keyword):
@@ -29,19 +23,11 @@ def patients_events(keyword):
 
         # get icu stays from ICUSTAYS where subject_id is in df_patients
         df_icustays = read_csv('ICUSTAYS.csv')
-<<<<<<< HEAD
-        df_icustays = df_icustays[df_icustays['subject_id'].isin(df_patients['subject_id'])]
-        # only stays < 2 days
-        # df_icustays = df_icustays[df_icustays['los'] <= 2]
-        # print(df_icustays.head(5))
-        # print(f"Number of ICU stays with {keyword}: {df_icustays.shape[0]}")
-=======
         df_icustays = df_icustays[df_icustays['SUBJECT_ID'].isin(df_patients['SUBJECT_ID'])]
         # only stays < 3 days
         # df_icustays = df_icustays[df_icustays['LOS'] <= 3]
         print(df_icustays.head(5))
         print(f"Number of ICU stays with {keyword}: {df_icustays.shape[0]}")
->>>>>>> ccc94ed8b2b831265e333c2f708d03b0ef2075bf
 
         # df_icustays_hadm = df_icustays[df_icustays['hadm_id'].isin(df_diagnoses_icd['hadm_id'])]
         # print(df_icustays_hadm.head(5))
@@ -106,10 +92,6 @@ def patients_events(keyword):
                               f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
 
         return (df_patients, df_chart_events, df_output_events, df_lab_icu_specific)
-<<<<<<< HEAD
-    
-patients_events('Acute respiratry failure')
-=======
 
 # aggregate events into hourly bins
 def aggregate_events(keyword):
@@ -141,4 +123,3 @@ def aggregate_events(keyword):
     # print(df_lab_patient.head(5))
 
     
->>>>>>> ccc94ed8b2b831265e333c2f708d03b0ef2075bf
