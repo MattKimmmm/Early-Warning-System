@@ -10,11 +10,15 @@ import matplotlib as plt
 from graphics import *
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from copy import deepcopy as dc
+
+
 
 # Set Device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-#Hyper parameters
+# Hyper parameters
 input_size = 1
 hidden_size = 256
 num_stacked_layers = 10
@@ -49,6 +53,7 @@ class TimeSeriesDataset(Dataset):
 
     def __getitem__(self, i):
         return self.X[i], self.y[i]
+
 
 def train_one_epoch():
     model.train(True)
@@ -91,6 +96,56 @@ def validate_one_epoch():
     print()
 
 
+# Load Data
+data = []
+
+# Normalize the data
+scaler = MinMaxScaler(feature_range=(-1,1))
+data = scaler.fit_transform(data)
+
+X = data[:,1:]
+y = data[:,0]
+#X = dc(np.flip(X,axis=1))
+
+# Split the data into 95% and 5% for training and testing
+split_index = int(len(X) * 0.95)
+
+X_train = X[:split_index]
+X_test = X[split_index:]
+
+y_train = y[:split_index]
+y_test = y[split_index:]
+
+# Adjust depedning on the dataset dimension
+lookback = 7
+
+X_train = X_train.reshape((-1, lookback, 1))
+X_test = X_test.reshape((-1, lookback, 1))
+
+y_train = y_train.reshape((-1, 1))
+y_test = y_test.reshape((-1, 1))
+
+
+# Convert into torch type
+X_train = torch.tensor(X_train).float()
+y_train = torch.tensor(y_train).float()
+X_test = torch.tensor(X_test).float()
+y_test = torch.tensor(y_test).float()
+
+# Write in timeseries
+train_dataset = TimeSeriesDataset(X_train, y_train)
+test_dataset = TimeSeriesDataset(X_test, y_test)
+
+# Load Data for model
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+for _, batch in enumerate(train_loader):
+    x_batch, y_batch = batch[0].to(device), batch[1].to(device)
+    print(x_batch.shape, y_batch.shape)
+    break
+
+
 #play around with the lr, batch size, model architecture
 learning_rate = 0.001  
 loss_function = nn.MSELoss()
@@ -99,16 +154,65 @@ model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
 num_epochs = 10
 
+
+
 for epoch in range(num_epochs):
     train_one_epoch()
     validate_one_epoch()
 
 
-# with torch.no_grad():
-#     predicted = model(X_train.to(device)).to('cpu').numpy()
+with torch.no_grad():
+     predicted = model(X_train.to(device)).to('cpu').numpy()
 
-# #plt.plot(y_train, label='Actual val')
+# plt.plot(y_train, label='Actual val')
 # plt.plot(predicted, label = 'Predicted val')
+# plt.xlabel('Day')
+# plt.ylabel('Close')
+# plt.legend()
+# plt.show()
+    
+
+
+train_predictions = predicted.flatten()
+
+dummies = np.zeros((X_train.shape[0], lookback+1))
+dummies[:,0] = train_predictions
+dummies = scaler.inverse_transform(dummies)
+
+train_predictions = dc(dummies[:, 0])
+
+dummies = np.zeros((X_train.shape[0], lookback+1))
+dummies[:,0] = y_train.flatten()
+dummies = scaler.inverse_transform(dummies)
+
+new_y_train = dc(dummies[:, 0])
+
+# plt.plot(new_y_train, label='Actual val')
+# plt.plot(train_predictions, label = 'Predicted val')
+# plt.xlabel('Day')
+# plt.ylabel('Close')
+# plt.legend()
+# plt.show()
+
+
+
+
+test_predictions = model(X_test.to(device)).detach().cpu().numpy().flatten()
+
+dummies = np.zeros((X_test.shape[0], lookback+1))
+dummies[:,0] = test_predictions
+dummies = scaler.inverse_transform(dummies)
+
+test_predictions = dc(dummies[:,0])
+
+dummies = np.zeros((X_test.shape[0], lookback+1))
+dummies[:,0] = y_test.flatten()
+dummies = scaler.inverse_transform(dummies)
+
+new_y_test = dc(dummies[:,0])
+
+# plt.plot(new_y_test, label='Actual val')
+# plt.plot(train_predictions, label = 'Predicted val')
 # plt.xlabel('Day')
 # plt.ylabel('Close')
 # plt.legend()
