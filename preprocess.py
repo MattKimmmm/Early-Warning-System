@@ -1,6 +1,9 @@
 import pandas as pd
 import os
+import numpy as np
 
+import torch
+import torch.nn as nn
 from utils import read_csv, get_icd_codes, save_to_csv_multiple
 
 # aggregate patient/event tables for a given keyword (deterioration)
@@ -25,8 +28,8 @@ def patients_events(keyword):
         df_icustays = df_icustays[df_icustays['subject_id'].isin(df_patients['subject_id'])]
         # only stays < 2 days
         # df_icustays = df_icustays[df_icustays['los'] <= 2]
-        print(df_icustays.head(5))
-        print(f"Number of ICU stays with {keyword}: {df_icustays.shape[0]}")
+        # print(df_icustays.head(5))
+        # print(f"Number of ICU stays with {keyword}: {df_icustays.shape[0]}")
 
         # df_icustays_hadm = df_icustays[df_icustays['hadm_id'].isin(df_diagnoses_icd['hadm_id'])]
         # print(df_icustays_hadm.head(5))
@@ -55,9 +58,14 @@ def patients_events(keyword):
         # print(df_lab_icu_specific.head(5))
         # print(f"Number of lab events in ICU with {keyword}: {df_lab_icu_specific.shape[0]}\n")
 
+        # 
+
+
         # save df to csv
         # save_to_csv_multiple([df_patients, df_chart_events, df_output_events, df_lab_icu_specific],
         #                      [f'patients_{keyword}', f'chart_events_{keyword}',
         #                       f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
 
         return (df_patients, df_chart_events, df_output_events, df_lab_icu_specific)
+    
+patients_events('Acute respiratry failure')

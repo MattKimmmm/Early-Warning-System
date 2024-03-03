@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 
@@ -19,9 +23,11 @@ itemIds1 = [211, 220045, 220277, 50822, 51003]
 items = itemIds + itemIds1
 icd9_code = ["51881","4275"]
 
-path = "/Users/yurockheo/Desktop/Early-Warning-System/data/"
-df1 = pd.read_csv(path+"DIAGNOSES_ICD.csv")
-df2 = pd.read_csv(path+"LABEVENTS.csv")
+
+path = r"C:\Users\yuroc\Desktop\Early-Warning-System\data"
+df1 = pd.read_csv(path+r"\DIAGNOSES_ICD.csv")
+df2 = pd.read_csv(path+r"\LABEVENTS.csv")
+
 subjectIds = df1.loc[df1['icd9_code'].isin(icd9_code)].loc[:,'subject_id'].to_numpy()
 
 labevent_arf = df2[(df2['itemid'].isin(items)) & (df2['subject_id'].isin(subjectIds))]
@@ -31,13 +37,24 @@ icd9_subset = df1[df1['icd9_code'].isin(icd9_code)][['subject_id', 'icd9_code']]
 data = pd.merge(df2, icd9_subset, on='subject_id', how='inner')
 data = data[data['itemid'].isin(items)]
 
+X = data.drop(columns=['icd9_code', 'hadm_id','row_id','value','valueuom','charttime','flag']).drop_duplicates(subset=['subject_id', 'itemid']).dropna(subset=['valuenum'])
 
-X = data.drop(columns=['icd9_code', 'hadm_id', 'charttime','row_id'])
+
+X = X.reset_index()
+d = {'subject_id': [], items[0]: [] , items[1]: [], items[2]: [] ,items[3]: [], items[4]:[], items[5]:[],items[6]:[],items[7]:[]}
 y = data['icd9_code']
+
 
 
 X = X.values
 y = y.values
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=41)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=41)
 
-X_train = torch.FloatTensor(X_
+#Convert X features to float tensors
+#X_train = torch.FloatTensor(X_train)
+#X_test = torch.FloatTensor(X_test)
+
+# Convert y labels to tensors long
+#y_train = torch.FloatTensor(y_train)
+#y_test = torch.FloatTensor(y_test)
+
