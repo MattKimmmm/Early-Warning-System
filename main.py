@@ -18,7 +18,7 @@ from preprocess import patients_events, aggregate_events
 # -> most patients stay in the ICU for 2 days or less (median: 2.11 days)
 
 # Patients Aggregate
-# patients_events("cardiac arrest")
+patients_events("cardiac arrest")
 
 # Aggregate Events for given keyword
 aggregate_events("cardiac arrest")

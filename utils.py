@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 import os
 
@@ -7,7 +8,7 @@ import os
 # read csv file
 def read_csv(file_name, columns_to_use=None):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "demo", file_name)
+    file_path = os.path.join(script_dir, "data", file_name)
 
     try:
         if columns_to_use is not None:
@@ -32,6 +33,7 @@ def unique_column_values(file_name, column_name):
 def unique_column_df(df, column_name):
     print(df[column_name].unique())
     print(f"Number of unique values: {len(df[column_name].unique())}")
+    return df[column_name].unique()
 
 # get icd codes given keyword
 def get_icd_codes(keyword, file='D_ICD_DIAGNOSES.csv'):
@@ -73,10 +75,18 @@ def column_analytics_df(df, column_name, num_bins):
     plt.hist(df[column_name], bins=num_bins)
     plt.show()
 
+# save the list as npy file
+def save_to_npy(list, file_name):
+    np_array = np.array(list)
+    script_dir = os.path.dirname(__file__)
+    file_path = os.path.join(script_dir, "data", "input", file_name)
+    np.save(file_path, np_array)
+    print(f"Data saved to {file_path}")
+
 # save single pd dataframe to csv
 def save_to_csv(df, file_name):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "demo", "processed", file_name)
+    file_path = os.path.join(script_dir, "data", "processed", file_name)
     df.to_csv(file_path, index=False)
     print(f"Dataframe saved to {file_path}")
 
@@ -88,9 +98,10 @@ def save_to_csv_multiple(dfs, file_names):
 # load single pd dataframe from csv
 def load_from_csv(file_name):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "demo", "processed", file_name)
+    file_path = os.path.join(script_dir, "data", "processed", file_name)
     df = pd.read_csv(file_path)
     return df
+
 
 # load multiple pd daraframes from csv
 def load_from_csv_multiple(file_names):
@@ -98,3 +109,56 @@ def load_from_csv_multiple(file_names):
     for file_name in file_names:
         dfs.append(load_from_csv(file_name))
     return dfs
+
+# given a joined patient/event df, split it into dfs for each patient
+def split_by_patients(df):
+    unique_patients = df['SUBJECT_ID'].unique()
+    patient_dfs = []
+    for patient in unique_patients:
+        patient_dfs.append(df[df['SUBJECT_ID'] == patient])
+    return patient_dfs
+
+# given patient-specific event df, aggregate items by hour
+def aggregate_events_by_time(df, intime):
+    # print(intime)
+    # print(pd.to_datetime(intime))
+    intime = pd.to_datetime(intime)
+    df['CHARTTIME'] = pd.to_datetime(df['CHARTTIME'])
+
+    df['HOUR_DIFF'] = ((df['CHARTTIME'] - intime).dt.total_seconds() // 3600).astype(int)
+    hourly_dfs = []
+
+    for hour in range(72):
+        hourly_df = df[df['HOUR_DIFF'] == hour]
+        if hourly_df.empty:
+            # append a empty df
+            hourly_dfs.append(pd.DataFrame())
+            # print(f"Hour {hour}: 0 events")
+        else:
+            hourly_dfs.append(hourly_df)
+            # print(f"Hour {hour}: {len(hourly_df)} events")
+    
+    return hourly_dfs
+
+# given patient-specific event df, aggregate unique items from events df return aggregated dfs for each item
+def aggregate_events_for_item(df, unique_items):
+    item_dfs = []
+    count = 0
+    for item in unique_items:
+        df_item = df[df['ITEMID'] == item]
+        if df_item.empty:
+            # append a empty df
+            item_dfs.append(pd.DataFrame())
+        else:
+            item_dfs.append(df_item)
+            count += 1
+        # print(f"Number of events for item {item}: {df_item.shape[0]}")
+        # print(df_item.head(5))
+    # print(f"Number of unique items: {len(unique_items)}")
+    # print(f"Number of items excluded: {len(unique_items) - len(item_dfs)}")
+    # print(f"Number of items included: {count}\n")
+    return item_dfs
+
+# given patient-time-specific df, calculate the average of "VALUE" column
+def column_average(df, column_name):
+    return df[column_name].mean()
