@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import numpy as np
 
 from utils import read_csv, get_icd_codes, save_to_csv_multiple, load_from_csv_multiple, unique_column_df, column_analytics_df, load_from_csv
 from utils import split_by_patients, aggregate_events_for_item, aggregate_events_by_time, column_average, save_to_npy
@@ -83,6 +84,9 @@ def patients_events(keyword):
         df_chart_events = pd.merge(df_chart_events, df_d_items, on='ITEMID')
         df_output_events = pd.merge(df_output_events, df_d_items, on='ITEMID')
         df_lab_icu_specific = pd.merge(df_lab_icu_specific, df_d_labitems, on='ITEMID')
+
+        # 
+
 
         # save df to csv
         save_to_csv_multiple([df_patients, df_chart_events, df_output_events, df_lab_icu_specific],
@@ -171,3 +175,4 @@ def aggregate_events(keyword):
     save_to_npy(input, f'input_{keyword}')
 
 
+    
