@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
+import time
 
 from utils import read_csv, get_icd_codes, save_to_csv_multiple, load_from_csv_multiple, unique_column_df, column_analytics_df, load_from_csv
 from utils import split_by_patients, aggregate_events_for_item, aggregate_events_by_time, column_average, save_to_npy
@@ -103,7 +104,7 @@ def patients_events(keyword):
     
 
 # aggregate events into hourly bins
-def aggregate_events(keyword):
+def aggregate_events_output_lab(keyword):
     # load dataframes
     df_patients = load_from_csv(f'patients_{keyword}')
     # [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
@@ -131,6 +132,9 @@ def aggregate_events(keyword):
     print(f"Number of unique patients with {keyword}: {df_lab_patient['SUBJECT_ID'].nunique()}")
     print(f"Number of lab events with {keyword}: {df_lab_patient.shape[0]}")
     print(df_lab_patient.head(5))
+
+    print(f"Starting Aggregation for Output Events")
+    since = time.time()
 
     # aggregate events by subjects
     # output events
@@ -169,15 +173,68 @@ def aggregate_events(keyword):
             patient_specific.append(items_aggregated)
             
         input.append(patient_specific)
+
+    # print input shape
+    num_patients = len(input)
+    num_hours = len(input[0])
+    num_items = len(input[0][0][0])
+
+    print(f"Outputevents Aggregation done in {time.time() - since} seconds")
+    # print(input[0][0])
+    print(f"Input dimensions: {num_patients} patients x {num_hours} hours x {num_items} items")
+    # print(input)
+    save_to_npy(input, f'input_{keyword}_output')
+
+
+    print("Starting Aggregation for Lab Events")
+    since = time.time()
+    # lab events
+    # input shape: [# patients, # hours (72), # unique items]
+    input = []
+    for patient in split_by_patients(df_lab_patient):
+        patient_specific = []
+        # print(f"Number of output events for patient {patient['SUBJECT_ID'].iloc[0]}: {patient.shape[0]}")
+        print(patient.head(5))
+
+        intime = patient['INTIME'].iloc[0]
+
+        # items_dfs = aggregate_events_for_item(patient, df_output_unique)
+
+        times_dfs = aggregate_events_by_time(patient, intime)
+
+        # for each hour, aggregate value by item and make a list
+        for i, times_df in enumerate(times_dfs):
+            items_aggregated = []
+
+            if times_df.empty:
+                items_aggregated.append([0] * len(df_output_unique))
+            else:
+                items_dfs = aggregate_events_for_item(times_df, df_output_unique)
+                unique_item_aggregated = []
+                for item_df in items_dfs:
+                    if item_df.empty:
+                        unique_item_aggregated.append(0)
+                    else:
+                        unique_item_aggregated.append(column_average(item_df, 'VALUE'))
+
+                items_aggregated.append(unique_item_aggregated)
+                # print(unique_item_aggregated)
+                # print(f"length: {len(unique_item_aggregated)}")
+            
+            patient_specific.append(items_aggregated)
+            
+        input.append(patient_specific)
     
     # print input shape
     num_patients = len(input)
     num_hours = len(input[0])
     num_items = len(input[0][0][0])
+
+    print(f"Labevents Aggregation done in {time.time() - since} seconds")
     # print(input[0][0])
     print(f"Input dimensions: {num_patients} patients x {num_hours} hours x {num_items} items")
     # print(input)
-    save_to_npy(input, f'input_{keyword}')
+    save_to_npy(input, f'input_{keyword}_lab')
 
 
     

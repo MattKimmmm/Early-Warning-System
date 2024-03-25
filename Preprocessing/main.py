@@ -1,7 +1,7 @@
 
 
 from utils import unique_column_values, get_icd_codes, column_analytics
-from preprocess import patients_events, aggregate_events
+from preprocess import patients_events, aggregate_events_output_lab
 import time
 
 # Unique Column Values
@@ -25,5 +25,5 @@ import time
 
 since = time.time()
 # Aggregate Events for given keyword
-aggregate_events("cardiac arrest")
+aggregate_events_output_lab("cardiac arrest")
 print(f"aggregate_events took {time.time() - since}")
