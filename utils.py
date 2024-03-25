@@ -11,12 +11,22 @@ def read_csv(file_name, columns_to_use=None):
     file_path = os.path.join(script_dir, "data", file_name)
 
     try:
+        # prevent memory explosion
+        df_list = []
+        chunks = None
         if columns_to_use is not None:
+            # chunks = pd.read_csv(file_path, usecols=columns_to_use, chunksize=1000, low_memory=False)
+
             df = pd.read_csv(file_path, usecols=columns_to_use, low_memory=False)
         else:
+            # chunks = pd.read_csv(file_path, chunksize=1000, low_memory=False)
             df = pd.read_csv(file_path, low_memory=False)
         
-        df.columns = df.columns.str.upper()
+        # for chunk in chunks:
+        #     chunk.columns = chunk.columns.str.upper()
+        #     df_list.append(chunk)
+        
+        # df = pd.concat(df_list, axis=0)
         # print(df.head(5))
         return df
     except FileNotFoundError:
