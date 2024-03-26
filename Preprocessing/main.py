@@ -1,6 +1,4 @@
-
-
-from utils import unique_column_values, get_icd_codes, column_analytics
+from utils import unique_column_values, get_icd_codes, column_analytics, unique_column, load_np
 from preprocess import patients_events, aggregate_events_output_lab
 import time
 
@@ -23,7 +21,9 @@ import time
 # patients_events("cardiac arrest")
 # print(f"patients_event took {time.time() - since}")
 
-since = time.time()
-# Aggregate Events for given keyword
-aggregate_events_output_lab("cardiac arrest")
-print(f"aggregate_events took {time.time() - since}")
+# since = time.time()
+# # Aggregate Events for given keyword
+# aggregate_events_output_lab("cardiac arrest")
+# print(f"aggregate_events took {time.time() - since}")
+
+npy = load_np("input_cardiac arrest_lab.npy")

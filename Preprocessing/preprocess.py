@@ -5,6 +5,7 @@ import time
 
 from utils import read_csv, get_icd_codes, save_to_csv_multiple, load_from_csv_multiple, unique_column_df, column_analytics_df, load_from_csv
 from utils import split_by_patients, aggregate_events_for_item, aggregate_events_by_time, column_average, save_to_npy
+from utils import unique_column
 
 # aggregate patient/event tables for a given keyword (deterioration)
 def patients_events(keyword):
@@ -109,15 +110,19 @@ def aggregate_events_output_lab(keyword):
     df_patients = load_from_csv(f'patients_{keyword}')
     # [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
     [df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
+    unique_column(df_output_event, "df_output_event")
+    unique_column(df_lab_icu_specific, "df_lab_icu_specific")
 
     # print(f"Unique items in CHARTEVENTS with {keyword}:")
     # df_chart_unique = unique_column_df(df_chart_event, 'ITEMID')
 
     print(f"Unique items in OUTPUTEVENTS with {keyword}:")
     df_output_unique = unique_column_df(df_output_event, 'ITEMID')
+    # unique_column(df_output_unique, "df_output_unique")
 
     print(f"Unique items in LABEVENTS with {keyword}:")
     df_lab_unique = unique_column_df(df_lab_icu_specific, 'ITEMID')
+    # unique_column(df_lab_unique, "df_output_unique")
 
     # join patients with events
     # df_chart_patient = pd.merge(df_patients, df_chart_event, on='SUBJECT_ID', how='inner')
