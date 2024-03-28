@@ -10,18 +10,39 @@ def read_csv(file_name, columns_to_use=None):
     script_dir = os.path.dirname(__file__)
     file_path = os.path.join(script_dir, "data", file_name)
 
+    # if column names are in lowercase
+    if columns_to_use is not None:
+        columns_to_use = [column.lower() for column in columns_to_use]
+
     try:
+        # prevent memory explosion
+        df_list = []
+        chunks = None
         if columns_to_use is not None:
+            # chunks = pd.read_csv(file_path, usecols=columns_to_use, chunksize=1000, low_memory=False)
+
             df = pd.read_csv(file_path, usecols=columns_to_use, low_memory=False)
         else:
+            # chunks = pd.read_csv(file_path, chunksize=1000, low_memory=False)
             df = pd.read_csv(file_path, low_memory=False)
         
+        # for chunk in chunks:
+        #     chunk.columns = chunk.columns.str.upper()
+        #     df_list.append(chunk)
+        
+        # df = pd.concat(df_list, axis=0)
+            
         df.columns = df.columns.str.upper()
         # print(df.head(5))
         return df
     except FileNotFoundError:
         print(f"File {file_path} not found")
         return None
+    
+# print unique columns given df
+def unique_column(df, name):
+    print(f"Unique Columns in {name}")
+    print(df.columns.tolist())
     
 # print unique column values given file name and column name
 def unique_column_values(file_name, column_name):
@@ -38,6 +59,7 @@ def unique_column_df(df, column_name):
 # get icd codes given keyword
 def get_icd_codes(keyword, file='D_ICD_DIAGNOSES.csv'):
     df = read_csv(file)
+    unique_column(df, "D_ICD_DIAGNOSES")
     
     # get the value of icd9_code column where either of short_title and long_title column contains the keyword
     icd_codes = df['ICD9_CODE'][(df['SHORT_TITLE'].str.contains(keyword, case=False)) | 
@@ -79,14 +101,14 @@ def column_analytics_df(df, column_name, num_bins):
 def save_to_npy(list, file_name):
     np_array = np.array(list)
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "data", "input", file_name)
+    file_path = os.path.join(script_dir, "../data", "input", file_name)
     np.save(file_path, np_array)
     print(f"Data saved to {file_path}")
 
 # save single pd dataframe to csv
 def save_to_csv(df, file_name):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "data", "processed", file_name)
+    file_path = os.path.join(script_dir, "../data", "processed", file_name)
     df.to_csv(file_path, index=False)
     print(f"Dataframe saved to {file_path}")
 
@@ -95,13 +117,25 @@ def save_to_csv_multiple(dfs, file_names):
     for i in range(len(dfs)):
         save_to_csv(dfs[i], file_names[i])
 
+# load single np
+def load_np(file_name):
+    # print(os.getcwd())
+    script_dir = os.path.dirname(__file__)
+    file_path = os.path.join(script_dir, "../data", "input", file_name)
+    # print(file_path)
+
+    loaded = np.load(file_path)
+    print(f"Loaded {file_name}")
+    print(f"shape: {loaded.shape}")
+    print(loaded)
+    return 
+
 # load single pd dataframe from csv
 def load_from_csv(file_name):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "data", "processed", file_name)
+    file_path = os.path.join(script_dir, "../data", "processed", file_name)
     df = pd.read_csv(file_path)
     return df
-
 
 # load multiple pd daraframes from csv
 def load_from_csv_multiple(file_names):

@@ -1,9 +1,11 @@
 import pandas as pd
 import os
 import numpy as np
+import time
 
 from utils import read_csv, get_icd_codes, save_to_csv_multiple, load_from_csv_multiple, unique_column_df, column_analytics_df, load_from_csv
 from utils import split_by_patients, aggregate_events_for_item, aggregate_events_by_time, column_average, save_to_npy
+from utils import unique_column
 
 # aggregate patient/event tables for a given keyword (deterioration)
 def patients_events(keyword):
@@ -37,14 +39,14 @@ def patients_events(keyword):
         
         # get lab results for selected patients' icu stays
         columns_to_use = ["ROW_ID", "SUBJECT_ID", "HADM_ID", "ITEMID", "CHARTTIME", "STORETIME", "CGID", "VALUENUM", "VALUEUOM", "WARNING", "ERROR"]
-        df_chart_events= read_csv('CHARTEVENTS.csv', columns_to_use=columns_to_use)
+        # df_chart_events= read_csv('CHARTEVENTS.csv', columns_to_use=columns_to_use)
         # for demo
         # df_chart_events= read_csv('CHARTEVENTS.csv')
-        df_chart_events = pd.merge(df_chart_events, df_icustays_subset, on='ICUSTAY_ID', how='inner')
-        print(df_chart_events.head(5))
-        print(f"Number of chart events with {keyword}: {df_chart_events.shape[0]}\n")
+        # df_chart_events = pd.merge(df_chart_events, df_icustays_subset, on='ICUSTAY_ID', how='inner')
+        # print(df_chart_events.head(5))
+        # print(f"Number of chart events with {keyword}: {df_chart_events.shape[0]}\n")
 
-        columns_to_use = ["ROW_ID", "SUBJECT_ID", "HADM_ID", "CHARTTIME", "ITEMID", "VALUENUM", "VALUEUOM", "FLAG"]
+        columns_to_use = ["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "VALUE", "VALUEUOM", "CGID"]
         df_output_events = read_csv('OUTPUTEVENTS.csv', columns_to_use=columns_to_use)
         # for demo
         # df_output_events = read_csv('OUTPUTEVENTS.csv')
@@ -52,7 +54,7 @@ def patients_events(keyword):
         print(df_output_events.head(5))
         print(f"Number of output events with {keyword}: {df_output_events.shape[0]}\n")
 
-        columns_to_use = ["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "VALUE", "VALUEUOM", "CGID"]
+        columns_to_use = ["ROW_ID", "SUBJECT_ID", "HADM_ID", "CHARTTIME", "ITEMID", "VALUE", "VALUENUM", "VALUEUOM"]
         df_lab_events = read_csv('LABEVENTS.csv', columns_to_use=columns_to_use)
         # for demo
         # df_lab_events = read_csv('LABEVENTS.csv')
@@ -81,7 +83,7 @@ def patients_events(keyword):
         print(f"Number of lab items: {df_d_labitems.shape[0]}\n")
 
         # join events with dictionaries for item description
-        df_chart_events = pd.merge(df_chart_events, df_d_items, on='ITEMID')
+        # df_chart_events = pd.merge(df_chart_events, df_d_items, on='ITEMID')
         df_output_events = pd.merge(df_output_events, df_d_items, on='ITEMID')
         df_lab_icu_specific = pd.merge(df_lab_icu_specific, df_d_labitems, on='ITEMID')
 
@@ -89,35 +91,44 @@ def patients_events(keyword):
 
 
         # save df to csv
-        save_to_csv_multiple([df_patients, df_chart_events, df_output_events, df_lab_icu_specific],
-                             [f'patients_{keyword}', f'chart_events_{keyword}',
+        # save_to_csv_multiple([df_patients, df_chart_events, df_output_events, df_lab_icu_specific],
+        #                      [f'patients_{keyword}', f'chart_events_{keyword}',
+        #                       f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
+        save_to_csv_multiple([df_patients, df_output_events, df_lab_icu_specific],
+                             [f'patients_{keyword}',
                               f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
 
-        return (df_patients, df_chart_events, df_output_events, df_lab_icu_specific)
+        # return (df_patients, df_chart_events, df_output_events, df_lab_icu_specific)
+        return (df_patients, df_output_events, df_lab_icu_specific)
 
 
     
 
 # aggregate events into hourly bins
-def aggregate_events(keyword):
+def aggregate_events_output_lab(keyword):
     # load dataframes
     df_patients = load_from_csv(f'patients_{keyword}')
-    [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
+    # [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
+    [df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
+    unique_column(df_output_event, "df_output_event")
+    unique_column(df_lab_icu_specific, "df_lab_icu_specific")
 
-    print(f"Unique items in CHARTEVENTS with {keyword}:")
-    df_chart_unique = unique_column_df(df_chart_event, 'ITEMID')
+    # print(f"Unique items in CHARTEVENTS with {keyword}:")
+    # df_chart_unique = unique_column_df(df_chart_event, 'ITEMID')
 
     print(f"Unique items in OUTPUTEVENTS with {keyword}:")
     df_output_unique = unique_column_df(df_output_event, 'ITEMID')
+    # unique_column(df_output_unique, "df_output_unique")
 
     print(f"Unique items in LABEVENTS with {keyword}:")
     df_lab_unique = unique_column_df(df_lab_icu_specific, 'ITEMID')
+    # unique_column(df_lab_unique, "df_output_unique")
 
     # join patients with events
-    df_chart_patient = pd.merge(df_patients, df_chart_event, on='SUBJECT_ID', how='inner')
-    print(f"Number of unique patients with {keyword}: {df_chart_patient['SUBJECT_ID'].nunique()}")
-    print(f"Number of chart events with {keyword}: {df_chart_patient.shape[0]}")
-    print(df_chart_patient.head(5))
+    # df_chart_patient = pd.merge(df_patients, df_chart_event, on='SUBJECT_ID', how='inner')
+    # print(f"Number of unique patients with {keyword}: {df_chart_patient['SUBJECT_ID'].nunique()}")
+    # print(f"Number of chart events with {keyword}: {df_chart_patient.shape[0]}")
+    # print(df_chart_patient.head(5))
     df_output_patient = pd.merge(df_patients, df_output_event, on='SUBJECT_ID', how='inner')
     print(f"Number of unique patients with {keyword}: {df_output_patient['SUBJECT_ID'].nunique()}")
     print(f"Number of output events with {keyword}: {df_output_patient.shape[0]}")
@@ -126,6 +137,9 @@ def aggregate_events(keyword):
     print(f"Number of unique patients with {keyword}: {df_lab_patient['SUBJECT_ID'].nunique()}")
     print(f"Number of lab events with {keyword}: {df_lab_patient.shape[0]}")
     print(df_lab_patient.head(5))
+
+    print(f"Starting Aggregation for Output Events")
+    since = time.time()
 
     # aggregate events by subjects
     # output events
@@ -164,15 +178,68 @@ def aggregate_events(keyword):
             patient_specific.append(items_aggregated)
             
         input.append(patient_specific)
+
+    # print input shape
+    num_patients = len(input)
+    num_hours = len(input[0])
+    num_items = len(input[0][0][0])
+
+    print(f"Outputevents Aggregation done in {time.time() - since} seconds")
+    # print(input[0][0])
+    print(f"Input dimensions: {num_patients} patients x {num_hours} hours x {num_items} items")
+    # print(input)
+    save_to_npy(input, f'input_{keyword}_output')
+
+
+    print("Starting Aggregation for Lab Events")
+    since = time.time()
+    # lab events
+    # input shape: [# patients, # hours (72), # unique items]
+    input = []
+    for patient in split_by_patients(df_lab_patient):
+        patient_specific = []
+        # print(f"Number of output events for patient {patient['SUBJECT_ID'].iloc[0]}: {patient.shape[0]}")
+        print(patient.head(5))
+
+        intime = patient['INTIME'].iloc[0]
+
+        # items_dfs = aggregate_events_for_item(patient, df_output_unique)
+
+        times_dfs = aggregate_events_by_time(patient, intime)
+
+        # for each hour, aggregate value by item and make a list
+        for i, times_df in enumerate(times_dfs):
+            items_aggregated = []
+
+            if times_df.empty:
+                items_aggregated.append([0] * len(df_output_unique))
+            else:
+                items_dfs = aggregate_events_for_item(times_df, df_output_unique)
+                unique_item_aggregated = []
+                for item_df in items_dfs:
+                    if item_df.empty:
+                        unique_item_aggregated.append(0)
+                    else:
+                        unique_item_aggregated.append(column_average(item_df, 'VALUE'))
+
+                items_aggregated.append(unique_item_aggregated)
+                # print(unique_item_aggregated)
+                # print(f"length: {len(unique_item_aggregated)}")
+            
+            patient_specific.append(items_aggregated)
+            
+        input.append(patient_specific)
     
     # print input shape
     num_patients = len(input)
     num_hours = len(input[0])
     num_items = len(input[0][0][0])
+
+    print(f"Labevents Aggregation done in {time.time() - since} seconds")
     # print(input[0][0])
     print(f"Input dimensions: {num_patients} patients x {num_hours} hours x {num_items} items")
     # print(input)
-    save_to_npy(input, f'input_{keyword}')
+    save_to_npy(input, f'input_{keyword}_lab')
 
 
     
