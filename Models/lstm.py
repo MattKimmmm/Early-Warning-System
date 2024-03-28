@@ -10,6 +10,7 @@ import matplotlib as plt
 from graphics import *
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
 
@@ -96,12 +97,21 @@ def validate_one_epoch():
     print()
 
 
-# Load Data
-data = []
 
+
+# Load Data here
+
+
+df_icu = pd.read_csv('./Preprocessing/preprocessed_data/ICUSTAYS.csv')
+df_icu['INTIME'] = pd.to_datetime(df_icu['INTIME'])
+df_icu['OUTTIME'] = pd.to_datetime(df_icu['OUTTIME'])
+
+
+data = df_icu
 # Normalize the data
 scaler = MinMaxScaler(feature_range=(-1,1))
 data = scaler.fit_transform(data)
+
 
 X = data[:,1:]
 y = data[:,0]
@@ -116,8 +126,8 @@ X_test = X[split_index:]
 y_train = y[:split_index]
 y_test = y[split_index:]
 
-# Adjust depending on the dataset dimension
-lookback = 7
+# Lookback 4 hours of data before to predict the next hour
+lookback = 4
 
 X_train = X_train.reshape((-1, lookback, 1))
 X_test = X_test.reshape((-1, lookback, 1))
