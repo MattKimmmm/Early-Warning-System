@@ -1,6 +1,7 @@
 import graphics
 from button import *
 from typing import Dict
+# from ..Models.RandomForest import RandomForest
 
 
 class Patient:
@@ -96,13 +97,13 @@ class UI:
 
 
         # Patient Info Buttons & Entries
-        maleButton = Image(Point(220, 320), "../images/male.png")
+        maleButton = Image(Point(220, 320), "./images/male.png")
         maleButton.draw(win)
         selectionBox = Rectangle(Point(195,260),Point(245,380))
         selectionBox.setOutline('Cyan')
         selectionBox.draw(win)
 
-        femaleButton = Image(Point(300, 320), "../images/female.png")
+        femaleButton = Image(Point(300, 320), "./images/female.png")
         femaleButton.draw(win)
 
         diagnosisEntry = Entry(Point(580, 250), 15)
@@ -180,6 +181,7 @@ class UI:
         win.close()
 
 
+    # RRN page
     def rnnPage(self,p):
         win = GraphWin("RNN Results", 1400, 800)
         win.setBackground("black")
@@ -199,7 +201,7 @@ class UI:
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
         
         if(p.getRisk() <= 25):
-            person = Image(Point(300, 350), "../images/p1.png")
+            person = Image(Point(300, 350), "./images/p1.png")
             person.draw(win)
             text = Text(Point(700,530), "Your patient is at low risk")
             text.setFill("Cyan")
@@ -207,21 +209,21 @@ class UI:
             text.draw(win)
 
         elif(p.getRisk() <= 50):
-            person = Image(Point(300, 350), "../images/p2.png")
+            person = Image(Point(300, 350), "./images/p2.png")
             person.draw(win)
             text = Text(Point(700,630), "Your patient is at risk")
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
         elif(p.getRisk() <= 75):
-            person = Image(Point(300, 350), "../images/p3.png")
+            person = Image(Point(300, 350), "./images/p3.png")
             person.draw(win)
             text = Text(Point(700,630), "Your patient is at high risk")
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
         else:
-            person = Image(Point(300, 350), "../images/p4.png")
+            person = Image(Point(300, 350), "./images/p4.png")
             person.draw(win)
             text = Text(Point(700,630), "Your patient is in very high risk")
             text.setFill("Cyan")
@@ -258,6 +260,7 @@ class UI:
             text.setSize(20)
             text.draw(win)
 
+
         y = 300
         for i in range(4):
             text = Text(Point(600,y), "Model Stat " + str(i))
@@ -267,10 +270,10 @@ class UI:
             y += 50
 
 
+
+
         pt = win.getMouse()
-
         while not exitButton.isClicked(pt):
-
             if viewButton.isClicked(pt):
                 self.modelPage("RNN")
             try:
@@ -281,23 +284,153 @@ class UI:
         win.close()
 
 
-    def lstmPage(self):
+    # LSTM page
+    def lstmPage(self,p):
         win = GraphWin("LSTM Results", 1400, 800)
         win.setBackground("black")
 
-    def rfPage(self):
+        viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
+
+        title = Text(Point(700,100),"Random Forest Model")
+        title.setFill("Cyan")
+        title.setSize(36)
+        title.setStyle("italic")
+        title.draw(win)
+
+        text = Text(Point(300,530), "Accuracy: ")
+        text.setFill("Cyan")
+        text.setSize(20)
+        text.draw(win)
+
+        y = 300
+        for i in range(4):
+            text = Text(Point(600,y), "Model Stat " + str(i))
+            text.setFill("Cyan")
+            text.setSize(15)
+            text.draw(win)
+            y += 50
+
+        pt = win.getMouse()
+        while not exitButton.isClicked(pt):
+            if viewButton.isClicked(pt):
+                self.modelPage("RNN")
+            try:
+                pt = win.getMouse()
+            except:
+                sys.exit()
+            pt = win.getMouse()
+        win.close()
+
+    # Random Forest Page
+    def rfPage(self,p):
         win = GraphWin("Random Forest Results", 1400, 800)
         win.setBackground("black")
 
+        rf = Image(Point(300, 350), "./images/rf.png")
+        rf.draw(win)
+        viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
+        
+        title = Text(Point(700,100),"Random Forest Model")
+        title.setFill("Cyan")
+        title.setSize(36)
+        title.setStyle("italic")
+        title.draw(win)
 
-    def modelPage(self, type):
-        if type == "RNN":
-            win = GraphWin("Model", 800, 800)
+        text = Text(Point(300,530), "Accuracy: ")
+        text.setFill("Cyan")
+        text.setSize(20)
+        text.draw(win)
+
+
+        
+        # Display Mode Stats
+        y = 300
+        for i in range(4):
+            text = Text(Point(600,y), "Model Stat " + str(i))
+            text.setFill("Cyan")
+            text.setSize(15)
+            text.draw(win)
+            y += 50
+
+        pt = win.getMouse()
+        while not exitButton.isClicked(pt):
+            if viewButton.isClicked(pt):
+                self.modelPage("RNN")
+            try:
+                pt = win.getMouse()
+            except:
+                sys.exit()
+            pt = win.getMouse()
+
+        win.close()
+
+
+    # Linear Regression Page
+    def lrPage(self,p):
+        win = GraphWin("Linear Regression model", 1400, 800)
+        win.setBackground("black")
+
+        viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
+        
+        title = Text(Point(700,100),"Random Forest Model")
+        title.setFill("Cyan")
+        title.setSize(36)
+        title.setStyle("italic")
+        title.draw(win)
+
+        text = Text(Point(300,530), "Accuracy: ")
+        text.setFill("Cyan")
+        text.setSize(20)
+        text.draw(win)
+
+
+
+        
+
+        pt = win.getMouse()
+        while not exitButton.isClicked(pt):
+            if viewButton.isClicked(pt):
+                self.modelPage("LR")
+            try:
+                pt = win.getMouse()
+            except:
+                sys.exit()
+            pt = win.getMouse()
+
+
+    # decision tree page
+    def dtPage(self, p):
+        win = GraphWin("Decision Tree", 1400, 800)
+        win.setBackground("black")
+
+
+
+    # When View model button is clicked return different results
+    def modelPage(self, model):
+        if(model == "RNN"):
+            win = GraphWin("RNN output", 800, 800)
             win.setBackground("white")
-        elif type == "Random Forest":
-            print("Show RF model")
-        else:
-            print("show LSTM model")
+            
+
+        elif(model == "Random Forest"):
+            win = GraphWin("Random Forest output", 800, 800)
+            win.setBackground("white")
+
+
+        elif(model == "LSTM"):
+            win = GraphWin("LSTM output", 800, 800)
+            win.setBackground("white")
+
+        elif(model == "LR"):
+            win = GraphWin("Linear Regression output", 800, 800)
+            win.setBackground("white")
+
+        elif(model == "Decision Tree"):
+            win = GraphWin("Decision Tree output", 800, 800)
+            win.setBackground("white")
 
 
 
