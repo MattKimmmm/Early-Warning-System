@@ -30,9 +30,9 @@ df_LABEVENTS = pd.read_csv('./BigData/LABEVENTS.csv')
 #1. When you get back home, extract the data for ARF and heart attack, merge all csv files.
 
 # ICD9_CODE
-# Cardiac Arrest = 4275 => 0 , sample subjects = [175533, 133550, 145834], Item IDs to consider = []
+# Cardiac Arrest = 4280 => 0 , sample subjects = [175533, 133550, 145834], Item IDs to consider = []
 # ARF = 51881  => 1   , ss = [124271, 190159, 176764], items  = []
-# Heart Stroke = 9920 => 2, ss = [160617, 109518, 144980], items = []
+# Heart Stroke = 4019 => 2, ss = [160617, 109518, 144980], items = []
 # 4280, 4019
 
 
@@ -90,7 +90,7 @@ df_features_scaled['SUBJECT_ID'] = df_pivoted.reset_index()['SUBJECT_ID']
 
 
 # Optionally, you can save this pivoted DataFrame to a new CSV
-df_features_scaled.to_csv('./randomforest.csv', index=False)
+df_features_scaled.to_csv('./data.csv', index=False)
 
 
 

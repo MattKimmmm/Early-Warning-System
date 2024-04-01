@@ -1,0 +1,149 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
+
+
+def ethnicity_to_numeric(ethnicity):
+    if 'WHITE' in ethnicity:
+        return 10
+    elif ethnicity == 'BLACK/AFRICAN AMERICAN':
+        return 30
+    elif 'ASIAN' in ethnicity:
+        return 40
+    elif ethnicity == 'HISPANIC OR LATINO':
+        return 20
+    else:
+        return 0
+
+
+
+#df_CHARTEVENTS = pd.read_csv('./BigData/CHARTEVENTS.csv')
+#df_CHARTEVENTS = df_CHARTEVENTS.sample(frac=0.2)
+df_PATIENTS = pd.read_csv('./BigData/PATIENTS.csv')
+df_ADMISSIONS = pd.read_csv('./BigData/ADMISSIONS.csv')
+df_OUTPUTEVENTS = pd.read_csv('./BigData/OUTPUTEVENTS.csv')
+df_ICUSTAYS = pd.read_csv('./BigData/ICUSTAYS.csv')
+df_DIAGNOSES_ICD = pd.read_csv('./BigData/DIAGNOSES_ICD.csv')
+df_LABEVENTS = pd.read_csv('./BigData/LABEVENTS.csv')
+
+#1. When you get back home, extract the data for ARF and heart attack, merge all csv files.
+
+# ICD9_CODE
+# Congestive heart failure = 4280 => 0 , sample subjects = [175533, 133550, 145834], Item IDs to consider = []
+# ARF = 51881  => 1   , ss = [124271, 190159, 176764], items  = []
+# Hypertension NOS = 4019 => 2, ss = [160617, 109518, 144980], items = []
+# 4280, 4019
+
+df_PATIENTS['DOB'] = pd.to_datetime(df_PATIENTS['DOB']) - pd.DateOffset(years=100)
+current_datetime = datetime.now()
+
+df_PATIENTS['AGE'] = current_datetime.year - df_PATIENTS['DOB'].dt.year
+not_had_birthday_this_year = (current_datetime.month < df_PATIENTS['DOB'].dt.month) | \
+                             ((current_datetime.month == df_PATIENTS['DOB'].dt.month) & \
+                              (current_datetime.day < df_PATIENTS['DOB'].dt.day))
+df_PATIENTS['AGE'] -= not_had_birthday_this_year
+df_ADMISSIONS['TARGET'] = df_ADMISSIONS['DEATHTIME'].notna().astype(int)
+df_PATIENTS['AGE'] = df_PATIENTS['AGE'].apply(lambda age: age + 100 if age < 0 else age)
+
+
+icd9_codes = ['4280', '51881', '4019']
+icd9_to_target = {'4280': 0, '51881': 1, '4019': 2}
+
+# item_ids = [ 50971, 51221, 50983, 50912, 50902, 51006, 50882, 50868, 50882, 50868]  # Ensure ITEMID is an integer
+item_ids = [ 50971, 51221, 50983, 50912, 50902]
+
+
+# Put data in pd df
+df_LABEVENTS['STORETIME'] = pd.to_datetime(df_LABEVENTS['CHARTTIME'])
+df_OUTPUTEVENTS['STORETIME'] = pd.to_datetime(df_OUTPUTEVENTS['STORETIME'])
+df_ICUSTAYS['INTIME'] = pd.to_datetime(df_ICUSTAYS['INTIME'])
+
+# Get unique subject_ids with the icd9_codes
+filtered_diagnoses = df_DIAGNOSES_ICD[df_DIAGNOSES_ICD['ICD9_CODE'].isin(icd9_codes)]
+unique_subject_ids = filtered_diagnoses['SUBJECT_ID'].unique()
+unique_patients = pd.DataFrame(unique_subject_ids, columns=['SUBJECT_ID']) # unique subject ids
+
+
+filtered_patients_df = df_PATIENTS[df_PATIENTS['SUBJECT_ID'].isin(unique_patients['SUBJECT_ID'])]
+
+final_df = pd.merge(
+    filtered_patients_df[['SUBJECT_ID', 'AGE', 'GENDER']],
+    df_ADMISSIONS[['SUBJECT_ID', 'ETHNICITY', 'TARGET']],
+    on='SUBJECT_ID'
+)
+
+gender_mapping = {'M': 10, 'F': 0}
+final_df['GENDER'] = final_df['GENDER'].map(gender_mapping)
+final_df = final_df.drop_duplicates(subset='SUBJECT_ID', keep='first')
+
+
+# Combine the chart and output events, then merge with ICU stays to align on SUBJECT_ID
+df_events = pd.concat([df_LABEVENTS])
+df_events = df_events[df_events['ITEMID'].isin(item_ids)]
+df_events = df_events.merge(df_ICUSTAYS[['SUBJECT_ID', 'INTIME']], on='SUBJECT_ID', how='inner')
+
+df_events['STORETIME'] = pd.to_datetime(df_events['STORETIME'])
+df_events['INTIME'] = pd.to_datetime(df_events['INTIME'])
+df_events = df_events[(df_events['STORETIME'] >= df_events['INTIME']) & (df_events['STORETIME'] <= df_events['INTIME'] + pd.Timedelta(hours=48))]
+
+df_pivoted = df_events.pivot_table(index='SUBJECT_ID', columns='ITEMID', values='VALUE', aggfunc='first')
+
+icd9_mapping = df_DIAGNOSES_ICD[df_DIAGNOSES_ICD['ICD9_CODE'].isin(icd9_codes)].drop_duplicates(subset='SUBJECT_ID')
+icd9_mapping['ICD9_CODE'] = icd9_mapping['ICD9_CODE'].astype(str)
+icd9_mapping.set_index('SUBJECT_ID', inplace=True)
+icd9_code_map = icd9_mapping['ICD9_CODE'].to_dict()
+df_pivoted['TARGET'] = df_pivoted.index.map(icd9_code_map)
+df_pivoted['TARGET'] = df_pivoted['TARGET'].map(icd9_to_target)
+
+# Reset index to turn SUBJECT_ID from an index into a column
+df_pivoted = df_pivoted.dropna()
+df_pivoted.reset_index(inplace=True)
+
+
+features = df_pivoted.drop(['TARGET'], axis=1)
+
+final_df = final_df.merge(features, on='SUBJECT_ID', how='left')
+
+
+
+columns = [50971, 51221, 50983, 50912, 50902]
+
+for column in columns:
+    final_df[column] = pd.to_numeric(final_df[column], errors ='coerce')
+
+final_df['ETHNICITY'] = final_df['ETHNICITY'].apply(ethnicity_to_numeric)
+final_df = final_df.dropna()
+final_df = final_df[(final_df['AGE'] >= 16) & (final_df['AGE'] <= 87)]
+
+print(final_df.head())
+# scaler = MinMaxScaler()
+# features_scaled = scaler.fit_transform(features)
+# df_features_scaled = pd.DataFrame(features_scaled, columns=features.columns)
+# df_features_scaled['TARGET'] = df_pivoted['TARGET']
+# df_features_scaled['SUBJECT_ID'] = df_pivoted.reset_index()['SUBJECT_ID']
+
+
+# # Optionally, you can save this pivoted DataFrame to a new CSV
+# df_features_scaled.to_csv('./data.csv', index=False)
+
+
+final_df.to_csv('./data.csv', index = False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

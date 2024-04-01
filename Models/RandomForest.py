@@ -14,39 +14,55 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 
-data = pd.read_csv('./randomforest.csv')
-data = data.sample(frac=0.9)
+def random_forest_result():
+    data = pd.read_csv('./data.csv')
+    data = data.sample(frac=0.9)
 
 
-X = data.drop(['SUBJECT_ID','TARGET'], axis=1)
-y = data['TARGET']
+    X = data.drop(['SUBJECT_ID','TARGET'], axis=1)
+    y = data['TARGET']
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
-
-rf = RandomForestClassifier()
-rf.fit(X_train, y_train)
-
-y_pred = rf.predict(X_test)
-
-accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy: ", accuracy)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
 
 
-for i, tree in enumerate(rf.estimators_[:3]):
-    dot_data = export_graphviz(tree,
-                               out_file=None,
-                               feature_names=X_train.columns,
-                               filled=True,
-                               max_depth=2,
-                               impurity=False,
-                               proportion=True)
-    graph = graphviz.Source(dot_data)
-    graph.render(f'rf_tree_{i}', format='png', cleanup=True)
-  
-for i in range(3):
-    img = mpimg.imread(f'rf_tree_{i}.png')
-    plt.figure(figsize=(10,10))
-    plt.imshow(img)
-    plt.axis('off')  # Do not show axes to keep it tidy
-    plt.show()
+    rf = RandomForestClassifier()
+    rf.fit(X_train, y_train)
+
+    y_pred = rf.predict(X_test)
+    
+    
+    accuracy = accuracy_score(y_test, y_pred)
+    
+
+
+    for i, tree in enumerate(rf.estimators_[:3]):
+        dot_data = export_graphviz(tree,
+                                out_file=None,
+                                feature_names=X_train.columns,
+                                filled=True,
+                                max_depth=2,
+                                impurity=False,
+                                proportion=True)
+        graph = graphviz.Source(dot_data)
+        graph.render(f'rf_tree_{i}', format='png', cleanup=True)
+    
+    for i in range(3):
+        img = mpimg.imread(f'rf_tree_{i}.png')
+        plt.figure(figsize=(10,10))
+        plt.imshow(img)
+        plt.axis('off')  # Do not show axes to keep it tidy
+        plt.show()
+
+    cm = confusion_matrix(y_test, y_pred)
+    ConfusionMatrixDisplay(confusion_matrix=cm).plot()
+
+
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+
+    # print("Accuracy:", accuracy)
+    # print("Precision:", precision)
+    # print("Recall:", recall)
+    return [accuracy, precision, recall]

@@ -1,7 +1,7 @@
 import graphics
 from button import *
 from typing import Dict
-# from ..Models.RandomForest import RandomForest
+from ..Models.RandomForest import random_forest_result
 
 
 class Patient:
@@ -90,9 +90,11 @@ class UI:
         text7.draw(win)
 
         # Draw Buttons
-        rnnButton = Button(win, Point(300,600),100,75,"RNN")
-        rfButton = Button(win, Point(500,600),175,75,"Random Forest")
-        lstmButton = Button(win, Point(700,600),100,75,"LSTM")
+        rnnButton = Button(win, Point(400,600),100,75,"RNN")
+        rfButton = Button(win, Point(575,600),175,75,"Random Forest")
+        lrButton = Button(win, Point(810,600),200,75,"Linear Regression")
+        lstmButton = Button(win, Point(1000,600),100,75,"LSTM")
+    
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
 
 
@@ -167,12 +169,15 @@ class UI:
                 
             elif lstmButton.isClicked(pt):
                 win.close()
-                self.lstmPage()
+                self.lstmPage(p)
 
             elif rfButton.isClicked(pt):
                 win.close()
-                self.rfPage()
-                
+                self.rfPage(p)
+            
+            elif lrButton.isClicked(pt):
+                win.close()
+                self.lrPage(p)
         
             try:
                 pt = win.getMouse()
@@ -198,6 +203,7 @@ class UI:
 
 
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
         
         if(p.getRisk() <= 25):
@@ -276,6 +282,12 @@ class UI:
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
                 self.modelPage("RNN")
+
+            elif goBackButton.isClicked(pt):
+                win.close()
+                self.Start()
+
+
             try:
                 pt = win.getMouse()
             except:
@@ -290,6 +302,7 @@ class UI:
         win.setBackground("black")
 
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
 
         title = Text(Point(700,100),"Random Forest Model")
@@ -315,21 +328,28 @@ class UI:
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
                 self.modelPage("RNN")
+
+            elif goBackButton.isClicked(pt):
+                win.close()
+                self.Start()
+
             try:
                 pt = win.getMouse()
             except:
                 sys.exit()
-            pt = win.getMouse()
-        win.close()
+            
+        
 
     # Random Forest Page
     def rfPage(self,p):
+
         win = GraphWin("Random Forest Results", 1400, 800)
         win.setBackground("black")
 
-        rf = Image(Point(300, 350), "./images/rf.png")
-        rf.draw(win)
+        rfImage = Image(Point(300, 350), "./images/rf.png")
+        rfImage.draw(win)
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
         
         title = Text(Point(700,100),"Random Forest Model")
@@ -344,11 +364,12 @@ class UI:
         text.draw(win)
 
 
-        
+        results = random_forest_result()
+
         # Display Mode Stats
         y = 300
         for i in range(4):
-            text = Text(Point(600,y), "Model Stat " + str(i))
+            text = Text(Point(600,y), "Model Stat " + results[i])
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
@@ -358,21 +379,25 @@ class UI:
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
                 self.modelPage("RNN")
+            elif goBackButton.isClicked(pt):
+                win.close()
+                self.Start()
             try:
                 pt = win.getMouse()
             except:
                 sys.exit()
-            pt = win.getMouse()
+            
 
         win.close()
 
 
-    # Linear Regression Page
+    # Logistic Regression Page
     def lrPage(self,p):
-        win = GraphWin("Linear Regression model", 1400, 800)
+        win = GraphWin("Logistic Regression model", 1400, 800)
         win.setBackground("black")
 
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
         
         title = Text(Point(700,100),"Random Forest Model")
@@ -394,18 +419,16 @@ class UI:
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
                 self.modelPage("LR")
+            
+            elif goBackButton.isClicked(pt):
+                win.close()
+                self.Start()
+
             try:
                 pt = win.getMouse()
             except:
                 sys.exit()
-            pt = win.getMouse()
-
-
-    # decision tree page
-    def dtPage(self, p):
-        win = GraphWin("Decision Tree", 1400, 800)
-        win.setBackground("black")
-
+            
 
 
     # When View model button is clicked return different results
@@ -427,11 +450,6 @@ class UI:
         elif(model == "LR"):
             win = GraphWin("Linear Regression output", 800, 800)
             win.setBackground("white")
-
-        elif(model == "Decision Tree"):
-            win = GraphWin("Decision Tree output", 800, 800)
-            win.setBackground("white")
-
 
 
 def main():
