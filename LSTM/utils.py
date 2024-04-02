@@ -21,6 +21,11 @@ def load_tensors(keyword):
     train_dataset = TensorDataset(data_train_tensor, labels_train_tensor)
     test_dataset = TensorDataset(data_test_tensor, labels_test_tensor)
 
+    print(f"Training Data Shape: {train_dataset.tensors[0].shape}")
+    print(f"Training Labels Shape: {train_dataset.tensors[1].shape}")
+    print(f"Test Data Shape: {test_dataset.tensors[0].shape}")
+    print(f"Test Labels Shape: {test_dataset.tensors[1].shape}")
+
     train_loader = DataLoader(train_dataset, **dataloader_params)
     test_loader = DataLoader(test_dataset, **{**dataloader_params, 'shuffle': False})
 

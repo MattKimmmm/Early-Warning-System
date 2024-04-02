@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
-class lmLSTM(nn.Module):
-    def __init__(self,  input_size, hidden_dim, device, num_layers=1):
+class LSTM_base(nn.Module):
+    def __init__(self,  input_size, hidden_dim, device, num_layers):
         """
         Args:
             input_size = # features per time window
         """
-        super(lmLSTM, self).__init__()
+        super(LSTM_base, self).__init__()
         # Your code goes here
         self.device = device
         self.input_size = input_size
@@ -26,7 +26,7 @@ class lmLSTM(nn.Module):
         self.lstm = nn.LSTM(input_size, hidden_dim, num_layers, batch_first=True)
 
         # a linear layer to map outputs[hidden_dim] to vocab size[vocab_size]
-        self.linear = nn.Linear(hidden_dim, input_size)
+        self.linear = nn.Linear(hidden_dim, 1)
 
     def init_state(self, batch_size):
         
@@ -40,9 +40,8 @@ class lmLSTM(nn.Module):
         return (states[0].detach(), states[1].detach())
 
     def forward(self, inputs, states):
-
         logits, states = self.lstm(inputs, states)
         logits = self.linear(logits)
-        # print(f"At forward logit shape: {logits.shape}")
+        probs = torch.sigmoid(logits)
 
-        return logits, states
+        return probs, states
