@@ -8,11 +8,11 @@ import os
 # read csv file
 def read_csv(file_name, columns_to_use=None):
     script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "data", file_name)
+    file_path = os.path.join(script_dir, "../data", file_name)
 
     # if column names are in lowercase
-    if columns_to_use is not None:
-        columns_to_use = [column.lower() for column in columns_to_use]
+    # if columns_to_use is not None:
+    #     columns_to_use = [column.lower() for column in columns_to_use]
 
     try:
         # prevent memory explosion
@@ -53,21 +53,21 @@ def unique_column_values(file_name, column_name):
 # print unique column values given df and column name
 def unique_column_df(df, column_name):
     print(df[column_name].unique())
-    print(f"Number of unique values: {len(df[column_name].unique())}")
+    # print(f"Number of unique values: {len(df[column_name].unique())}")
     return df[column_name].unique()
 
 # get icd codes given keyword
 def get_icd_codes(keyword, file='D_ICD_DIAGNOSES.csv'):
     df = read_csv(file)
-    unique_column(df, "D_ICD_DIAGNOSES")
+    # unique_column(df, "D_ICD_DIAGNOSES")
     
     # get the value of icd9_code column where either of short_title and long_title column contains the keyword
     icd_codes = df['ICD9_CODE'][(df['SHORT_TITLE'].str.contains(keyword, case=False)) | 
                                 (df['LONG_TITLE'].str.contains(keyword, case=False))]
     
     # row_id, icd_code (77895 for newborn cardiac arrest, we might want to exclude this)
-    # print(f"ICD codes for {keyword}:")
-    # print(icd_codes.head(5))
+    print(f"ICD codes for {keyword}:")
+    print(icd_codes.head(5))
 
     return icd_codes
 
@@ -127,8 +127,8 @@ def load_np(file_name):
     loaded = np.load(file_path)
     print(f"Loaded {file_name}")
     print(f"shape: {loaded.shape}")
-    print(loaded)
-    return 
+    # print(loaded)
+    return loaded
 
 # load single pd dataframe from csv
 def load_from_csv(file_name):
@@ -152,8 +152,36 @@ def split_by_patients(df):
         patient_dfs.append(df[df['SUBJECT_ID'] == patient])
     return patient_dfs
 
+# given two lists of dfs, aggregate them only on the common patients
+def common_patients(df1, df2):
+    df1_patients = []
+    df2_patients = []
+
+    for df in df1:
+        subject_id = df["SUBJECT_ID"].iloc[0]
+        df1_patients.append(subject_id)
+    for df in df2:
+        subject_id = df["SUBJECT_ID"].iloc[0]
+        df2_patients.append(subject_id)
+
+    common_ids = set(df1_patients).intersection(set(df2_patients))
+    print(f"Number of common patients: {len(common_ids)}")
+
+    df1_common = [df for df in df1 if df["SUBJECT_ID"].iloc[0] in common_ids]
+    df2_common = [df for df in df2 if df["SUBJECT_ID"].iloc[0] in common_ids]
+
+    print(f"df1_common length: {len(df1_common)}")
+    print(f"df2_common length: {len(df2_common)}")
+
+    # make sure that the resulting dataframes have the same order by SUBJECT_ID
+    df1_common_sorted = sorted(df1_common, key=lambda x: x["SUBJECT_ID"].iloc[0])
+    df2_common_sorted = sorted(df2_common, key=lambda x: x["SUBJECT_ID"].iloc[0])
+
+    return (df1_common_sorted, df2_common_sorted)
+
 # given patient-specific event df, aggregate items by hour
 def aggregate_events_by_time(df, intime):
+    # print(f"df length: {len(df)}")
     # print(intime)
     # print(pd.to_datetime(intime))
     intime = pd.to_datetime(intime)
@@ -174,8 +202,9 @@ def aggregate_events_by_time(df, intime):
     
     return hourly_dfs
 
-# given patient-specific event df, aggregate unique items from events df return aggregated dfs for each item
+# given patient-specific event df, aggregate unique items from events df and return aggregated dfs for each item
 def aggregate_events_for_item(df, unique_items):
+    # print(f"df length: {len(df)}")
     item_dfs = []
     count = 0
     for item in unique_items:
@@ -185,11 +214,11 @@ def aggregate_events_for_item(df, unique_items):
             item_dfs.append(pd.DataFrame())
         else:
             item_dfs.append(df_item)
-            count += 1
+            count += len(df_item)
         # print(f"Number of events for item {item}: {df_item.shape[0]}")
         # print(df_item.head(5))
     # print(f"Number of unique items: {len(unique_items)}")
-    # print(f"Number of items excluded: {len(unique_items) - len(item_dfs)}")
+    # print(f"Number of items excluded: {len(unique_items) - count}")
     # print(f"Number of items included: {count}\n")
     return item_dfs
 

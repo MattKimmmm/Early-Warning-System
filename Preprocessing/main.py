@@ -1,6 +1,10 @@
 from utils import unique_column_values, get_icd_codes, column_analytics, unique_column, load_np
-from preprocess import patients_events, aggregate_events_output_lab
+from preprocess import patients_events, aggregate_events_output_lab, patients_events_nagative, create_dataset
+from preprocess import aggregate_events_output_lab_negative
 import time
+
+RANDOM_SEED = 42
+BATCH_SIZE = 16
 
 # Unique Column Values
 # unique_column_values('ICUSTAYS.csv', 'first_careunit')
@@ -19,11 +23,14 @@ import time
 # Patients Aggregate
 # since = time.time()
 # patients_events("cardiac arrest")
+# patients_events_nagative("cardiac arrest", 1355, RANDOM_SEED)
 # print(f"patients_event took {time.time() - since}")
 
+# Aggregate Events for given keyword
 # since = time.time()
-# # Aggregate Events for given keyword
 # aggregate_events_output_lab("cardiac arrest")
+# aggregate_events_output_lab_negative("cardiac arrest")
 # print(f"aggregate_events took {time.time() - since}")
 
-npy = load_np("input_cardiac arrest_lab.npy")
+# create dataloaders
+create_dataset("cardiac arrest", BATCH_SIZE, RANDOM_SEED)
