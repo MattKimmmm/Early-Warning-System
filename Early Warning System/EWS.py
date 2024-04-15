@@ -334,6 +334,35 @@ class UI:
 
     # LSTM page
     def lstmPage(self,p):
+
+        def read_lstm_output(filename):
+            with open(filename, 'rb') as file:
+                filesize = os.stat(filename).st_size
+                if filesize == 0:
+                    return None
+                else:
+                    offset = -2
+                    while -offset <= filesize:  # Go back until the beginning of the file
+                        file.seek(offset, os.SEEK_END)
+                        if file.read(1) == b'\n':
+                            return file.readline().decode()
+                        offset -= 1
+                    file.seek(0)
+                    return file.readline().decode()
+
+        result_string = read_lstm_output('./LSTM/train_test_avg.out')
+        result_string = result_string.split(": ", 1)[1]
+
+        # Now, let's create a dictionary by splitting the remaining string correctly
+        metrics = result_string.split(", ")
+        results = {metric.split(": ")[0]: float(metric.split(": ")[1]) for metric in metrics}
+
+        
+
+
+
+
+
         win = GraphWin("LSTM Results", 1400, 800)
         win.setBackground("black")
 
@@ -352,9 +381,9 @@ class UI:
         text.setSize(20)
         text.draw(win)
 
-        y = 300
-        for i in range(4):
-            text = Text(Point(600,y), "Model Stat " + str(i))
+        y = 325
+        for key, value in results.items():
+            text = Text(Point(600,y), key+" : " + str(math.ceil(value * 1000)/1000) + "%")
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
