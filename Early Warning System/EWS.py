@@ -3,14 +3,20 @@ import os
 import pandas as pd
 from button import *
 from typing import Dict
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from Models.RandomForest import random_forest_result
+from Models.RNN import rnn_result
+import seaborn as sns
 import math
 import graphviz
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.tree import export_graphviz
+from sklearn.metrics import classification_report
+import numpy as np
 
 
 class Patient:
@@ -196,12 +202,12 @@ class UI:
                 tests = {"Chloride" : df[0].iloc[0], "Creatinine" : df[1].iloc[0], "Potassium" : df[2].iloc[0], "Sodium" : df[3].iloc[0],  "Hematocrit" : df[4].iloc[0]}
                 test_results = list(tests.values())
                 p = Patient(age = ageEntry.getText(), gender = "M", diagnosis= diagnosisEntry.getText(), risk = 56, icu = icuEntry.getText(), ethnicity= ethnicityEntry.getText().upper(),test_results= tests)
-                features = [[p.getAge(), p.gender_to_numeric(), p.ethnicity_to_numeric()]+ test_results]
-                
+                features = [p.getAge(), p.gender_to_numeric(), p.ethnicity_to_numeric()]+ test_results
+                features = [float(item) for item in features]
 
             if rnnButton.isClicked(pt):
                 win.close()
-                self.rnnPage(p)
+                self.rnnPage(p,features)
                 
             elif lstmButton.isClicked(pt):
                 win.close()
@@ -222,11 +228,12 @@ class UI:
         win.close()
 
 
-    # RRN page
-    def rnnPage(self,p):
+    # RNN page
+    def rnnPage(self,p,features):
         win = GraphWin("RNN Results", 1400, 800)
         win.setBackground("black")
-        title = Text(Point(700,100),"Risk of "+ p.getDiagnosis() + ": " + str(p.getRisk()) + "%")
+        # title = Text(Point(700,100),"Risk of "+ p.getDiagnosis() + ": " + str(p.getRisk()) + "%")
+        title = Text(Point(700,100),"RNN model")
         title.setFill("Cyan")
         title.setSize(36)
         title.setStyle("italic")
@@ -241,56 +248,17 @@ class UI:
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
         goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
-        
-        if(p.getRisk() <= 25):
-            person = Image(Point(300, 350), "./images/p1.png")
-            person.draw(win)
-            text = Text(Point(700,530), "Your patient is at low risk")
-            text.setFill("Cyan")
-            text.setSize(15)
-            text.draw(win)
 
-        elif(p.getRisk() <= 50):
-            person = Image(Point(300, 350), "./images/p2.png")
-            person.draw(win)
-            text = Text(Point(700,630), "Your patient is at risk")
-            text.setFill("Cyan")
-            text.setSize(15)
-            text.draw(win)
-        elif(p.getRisk() <= 75):
-            person = Image(Point(300, 350), "./images/p3.png")
-            person.draw(win)
-            text = Text(Point(700,630), "Your patient is at high risk")
-            text.setFill("Cyan")
-            text.setSize(15)
-            text.draw(win)
-        else:
-            person = Image(Point(300, 350), "./images/p4.png")
-            person.draw(win)
-            text = Text(Point(700,630), "Your patient is in very high risk")
-            text.setFill("Cyan")
-            text.setSize(15)
-            text.draw(win)
-
-        text = Text(Point(900,230), "Patient Test Results")
-        text.setFill("Cyan")
-        text.setSize(20)
-        text.draw(win)
-
-        y = 300
-        tests = p.getTestResults()
-        for key, value in tests.items():
-            text = Text(Point(900,y), str(key)+ ": "+str(value) )
-            text.setFill("Cyan")
-            text.setSize(15)
-            text.draw(win)
-            y += 50
-
-        text = Text(Point(600,230), "Model")
+        text = Text(Point(600,230), "Classification Report")
         text.setFill("Cyan")
         text.setSize(20)
         text.draw(win)
         
+        text = Text(Point(900,230), "Test Results")
+        text.setFill("Cyan")
+        text.setSize(20)
+        text.draw(win)
+
         if (p.getGender() == "M"):
             text = Text(Point(300,180), "Male")
             text.setFill("Cyan")
@@ -303,13 +271,70 @@ class UI:
             text.draw(win)
 
 
+        loading_text = Text(Point(750,350), "Calculating...")
+        loading_text.setFill("Cyan")
+        loading_text.setSize(24)
+        loading_text.draw(win)
+
+        loading_text1 = Text(Point(750,400), "◌")
+        loading_text1.setFill("Cyan")
+        loading_text1.setSize(36)
+        loading_text1.draw(win)
+
+        model, y_true, y_pred_classes, test_acc, test_loss = rnn_result()
+
+        loading_text.undraw()
+        loading_text1.undraw()
+        
         y = 300
-        for i in range(4):
-            text = Text(Point(600,y), "Model Stat " + str(i))
+        tests = p.getTestResults()
+        for key, value in tests.items():
+            text = Text(Point(900,y), str(key)+ ": "+str(value) )
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
             y += 50
+        
+        text = Text(Point(580,380),classification_report(y_true, y_pred_classes)  )
+        text.setFill("Cyan")
+        text.setSize(15)
+        text.draw(win)
+
+        
+        features_array = np.array(features).reshape(1, len(features), 1)
+        prediction = model.predict(features_array)
+
+        if(prediction[0] > prediction[1]):
+            person = Image(Point(300, 350), "./images/p1.png")
+            person.draw(win)
+            text = Text(Point(700,530), "Your patient has low risk")
+            text.setFill("Cyan")
+            text.setSize(15)
+            text.draw(win)
+        # elif(p.getRisk() <= 50):
+        #     person = Image(Point(300, 350), "./images/p2.png")
+        #     person.draw(win)
+        #     text = Text(Point(700,630), "Your patient is at risk")
+        #     text.setFill("Cyan")
+        #     text.setSize(15)
+        #     text.draw(win)
+        # elif(p.getRisk() <= 75):
+        #     person = Image(Point(300, 350), "./images/p3.png")
+        #     person.draw(win)
+        #     text = Text(Point(700,630), "Your patient is at high risk")
+        #     text.setFill("Cyan")
+        #     text.setSize(15)
+        #     text.draw(win)
+        else:
+            person = Image(Point(300, 350), "./images/p4.png")
+            person.draw(win)
+            text = Text(Point(700,630), "Your patient has high risk")
+            text.setFill("Cyan")
+            text.setSize(15)
+            text.draw(win)
+
+
+
 
 
 
@@ -317,8 +342,9 @@ class UI:
         pt = win.getMouse()
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
-                self.modelPage("RNN")
-
+                cm = confusion_matrix(y_true, y_pred_classes)
+                self.modelPage("RNN", cm , None , None, None )
+    
             elif goBackButton.isClicked(pt):
                 win.close()
                 self.Start()
@@ -359,10 +385,6 @@ class UI:
 
         
 
-
-
-
-
         win = GraphWin("LSTM Results", 1400, 800)
         win.setBackground("black")
 
@@ -376,9 +398,14 @@ class UI:
         title.setStyle("italic")
         title.draw(win)
 
-        text = Text(Point(300,530), "Accuracy: ")
+        text = Text(Point(300,530), "stuff")
         text.setFill("Cyan")
         text.setSize(20)
+        text.draw(win)
+
+        text = Text(Point(600,250), "Model Statistics")
+        text.setFill("Cyan")
+        text.setSize(25)
         text.draw(win)
 
         y = 325
@@ -550,8 +577,20 @@ class UI:
     # When View model button is clicked return different results
     def modelPage(self, model_type, model, X_train, y_test, y_pred ):
         if(model_type == "RNN"):
+            plt.figure(figsize=(10,7))
+            sns.heatmap(model, annot=True, fmt='d')
+            plt.title('Confusion Matrix')
+            plt.ylabel('True label')
+            plt.xlabel('Predicted label')
+            plt.savefig('rnn_confusion_matrix.png', bbox_inches='tight')
+            plt.close()
+            
             win = GraphWin("RNN output", 800, 800)
             win.setBackground("white")
+             
+            rnn_cm = Image(Point(400,400), './rnn_confusion_matrix.png')
+            rnn_cm.draw(win)
+            
             
 
         elif(model_type == "Random Forest"):
