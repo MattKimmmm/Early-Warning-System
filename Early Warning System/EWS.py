@@ -4,11 +4,12 @@ import pandas as pd
 from button import *
 from typing import Dict
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from Models.RandomForest import random_forest_result
 from Models.RNN import rnn_result
+from Models.LogisticRegression import lr_results
 import seaborn as sns
 import math
 import graphviz
@@ -17,7 +18,8 @@ from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.tree import export_graphviz
 from sklearn.metrics import classification_report
 import numpy as np
-
+import tkinter as tk
+from tkinter import scrolledtext
 
 class Patient:
     def __init__(self, age, gender, diagnosis, risk, icu, ethnicity, test_results={}):
@@ -239,11 +241,6 @@ class UI:
         title.setStyle("italic")
         title.draw(win)
 
-        text1 = Text(Point(300,530), "Age: "+ p.getAge())
-        text1.setFill("Cyan")
-        text1.setSize(20)
-        text1.draw(win)
-
 
         viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
         goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
@@ -254,21 +251,10 @@ class UI:
         text.setSize(20)
         text.draw(win)
         
-        text = Text(Point(900,230), "Test Results")
+        text = Text(Point(1000,230), "Test Results")
         text.setFill("Cyan")
         text.setSize(20)
         text.draw(win)
-
-        if (p.getGender() == "M"):
-            text = Text(Point(300,180), "Male")
-            text.setFill("Cyan")
-            text.setSize(20)
-            text.draw(win)
-        else:
-            text = Text(Point(300,180), "Female")
-            text.setFill("Cyan")
-            text.setSize(20)
-            text.draw(win)
 
 
         loading_text = Text(Point(750,350), "Calculating...")
@@ -285,11 +271,27 @@ class UI:
 
         loading_text.undraw()
         loading_text1.undraw()
+
+        text1 = Text(Point(250,530), "Age: "+ p.getAge())
+        text1.setFill("Cyan")
+        text1.setSize(20)
+        text1.draw(win)
+
+        if (p.getGender() == "M"):
+            text = Text(Point(250,180), "Male")
+            text.setFill("Cyan")
+            text.setSize(20)
+            text.draw(win)
+        else:
+            text = Text(Point(250,180), "Female")
+            text.setFill("Cyan")
+            text.setSize(20)
+            text.draw(win)
         
         y = 300
         tests = p.getTestResults()
         for key, value in tests.items():
-            text = Text(Point(900,y), str(key)+ ": "+str(value) )
+            text = Text(Point(1000,y), str(key)+ ": "+str(value) )
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
@@ -304,10 +306,11 @@ class UI:
         features_array = np.array(features).reshape(1, len(features), 1)
         prediction = model.predict(features_array)
 
-        if(prediction[0] > prediction[1]):
-            person = Image(Point(300, 350), "./images/p1.png")
+        print(prediction)
+        if(prediction[0][0] > prediction[0][1]):
+            person = Image(Point(250, 350), "./images/p2.png")
             person.draw(win)
-            text = Text(Point(700,530), "Your patient has low risk")
+            text = Text(Point(700,600), "Your patient has low risk")
             text.setFill("Cyan")
             text.setSize(15)
             text.draw(win)
@@ -326,7 +329,7 @@ class UI:
         #     text.setSize(15)
         #     text.draw(win)
         else:
-            person = Image(Point(300, 350), "./images/p4.png")
+            person = Image(Point(250, 350), "./images/p4.png")
             person.draw(win)
             text = Text(Point(700,630), "Your patient has high risk")
             text.setFill("Cyan")
@@ -379,6 +382,16 @@ class UI:
         result_string = read_lstm_output('./LSTM/train_test_avg.out')
         result_string = result_string.split(": ", 1)[1]
 
+        try:
+            with open('./LSTM/train_test_avg.out', 'r') as file:
+                for line in file:
+                    if line.startswith("No improvement"):
+                        imp = line.strip()  # strip() removes any extra whitespace or newline characters
+        except FileNotFoundError:
+            print("The file was not found.")
+        except Exception as e:
+            print("An error occurred:", e)
+        
         # Now, let's create a dictionary by splitting the remaining string correctly
         metrics = result_string.split(", ")
         results = {metric.split(": ")[0]: float(metric.split(": ")[1]) for metric in metrics}
@@ -398,9 +411,20 @@ class UI:
         title.setStyle("italic")
         title.draw(win)
 
-        text = Text(Point(300,530), "stuff")
+
+        lstmImg = Image(Point(300,400), './images/lstm.png')
+        lstmImg.draw(win)
+
+        
+
+        text = Text(Point(1000,400), imp[:47])
         text.setFill("Cyan")
-        text.setSize(20)
+        text.setSize(18)
+        text.draw(win)
+
+        text = Text(Point(1000,430), imp[47:])
+        text.setFill("Cyan")
+        text.setSize(18)
         text.draw(win)
 
         text = Text(Point(600,250), "Model Statistics")
@@ -419,7 +443,7 @@ class UI:
         pt = win.getMouse()
         while not exitButton.isClicked(pt):
             if viewButton.isClicked(pt):
-                self.modelPage("RNN")
+                self.modelPage("LSTM", win,None,None,None)
 
             elif goBackButton.isClicked(pt):
                 win.close()
@@ -473,6 +497,8 @@ class UI:
         loading_text1.undraw()
         # Display Mode Stats
 
+
+        features = [features]
         prediction = rf.predict(features)
         text1.undraw()
 
@@ -539,7 +565,7 @@ class UI:
         win = GraphWin("Logistic Regression model", 1400, 800)
         win.setBackground("black")
 
-        viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
+        #viewButton = Button(win, Point(700, 720), 150, 50, "View Model")
         goBackButton = Button(win, Point(100, 750), 100, 50, "Go Back")
         exitButton = Button(win, Point(1325, 750), 100, 50, "Exit")
         
@@ -549,21 +575,31 @@ class UI:
         title.setStyle("italic")
         title.draw(win)
 
-        text = Text(Point(300,530), "Accuracy: ")
-        text.setFill("Cyan")
-        text.setSize(20)
-        text.draw(win)
+        loading_text = Text(Point(750,350), "Calculating...")
+        loading_text.setFill("Cyan")
+        loading_text.setSize(24)
+        loading_text.draw(win)
 
+        loading_text1 = Text(Point(750,400), "◌")
+        loading_text1.setFill("Cyan")
+        loading_text1.setSize(36)
+        loading_text1.draw(win)
 
+        lr_results()
 
-        
+        lr_cm = Image(Point(700,400), './lr_confusion_matrix.png')
+        lr_cm.draw(win)
+
+        loading_text.undraw()
+        loading_text1.undraw()
 
         pt = win.getMouse()
         while not exitButton.isClicked(pt):
-            if viewButton.isClicked(pt):
-                self.modelPage("LR")
+            # if viewButton.isClicked(pt):
+            #     self.modelPage("LR")
             
-            elif goBackButton.isClicked(pt):
+            # el
+            if goBackButton.isClicked(pt):
                 win.close()
                 self.Start()
 
@@ -617,15 +653,35 @@ class UI:
 
 
         elif(model_type == "LSTM"):
-            win = GraphWin("LSTM output", 800, 800)
-            win.setBackground("white")
+            root = tk.Tk()
+            root.title("File Contents Display")
+            root.geometry("800x800")  # Set the size of the window
 
+            # Create a ScrolledText widget for text display
+            text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD)
+            text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+            # Read and display the file contents
+            try:
+                with open('./LSTM/train_test_avg.out', 'r') as file:
+                    content = file.read()
+                    text_area.insert(tk.INSERT, content)
+                    text_area.config(state=tk.DISABLED)  # Make the text read-only
+            except Exception as e:
+                text_area.insert(tk.INSERT, "Failed to read the file: " + str(e))
+
+            # Start the Tkinter event loop
+            model.close()
+            root.mainloop()
+        
         elif(model_type == "LR"):
             win = GraphWin("Linear Regression output", 800, 800)
             win.setBackground("white")
-
+    
+        
 
 def main():
+    
     ui = UI()
     ui.Start()
 
