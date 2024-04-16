@@ -129,6 +129,26 @@ print(final_df.head())
 # # Optionally, you can save this pivoted DataFrame to a new CSV
 # df_features_scaled.to_csv('./data.csv', index=False)
 
+class_counts = final_df['TARGET'].value_counts()
+print("Class counts before balancing:", class_counts)
+
+# Find the number of samples in the smallest class to use for balancing
+min_class_size = class_counts.min()
+
+# Perform undersampling
+balanced_df = pd.DataFrame()  # This will hold the balanced dataset
+for cls in class_counts.index:
+    class_subset = final_df[final_df['TARGET'] == cls]
+    sampled_subset = class_subset.sample(min_class_size, random_state=42)  # Use a random state for reproducibility
+    balanced_df = pd.concat([balanced_df, sampled_subset])
+
+# Shuffle the DataFrame rows if you want to randomize the row order after concatenating
+balanced_df = balanced_df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+print("Class counts after balancing:", balanced_df['TARGET'].value_counts())
+
+# Save the balanced DataFrame back to a CSV if needed
+balanced_df.to_csv('./data_balanced.csv', index=False)
 
 final_df.to_csv('./data.csv', index = False)
 

@@ -6,7 +6,8 @@ from scipy.optimize import minimize
 import numpy as np
 
 def random_forest_result():
-    data = pd.read_csv('./data.csv')
+    # data = pd.read_csv('./data.csv')
+    data = pd.read_csv('./data_balanced.csv')
     data = data.sample(frac=0.9)
 
 

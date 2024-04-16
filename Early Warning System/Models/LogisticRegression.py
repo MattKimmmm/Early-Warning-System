@@ -10,7 +10,8 @@ from sklearn.model_selection import GridSearchCV
 
 
 def lr_results():
-    data = pd.read_csv('./data.csv')
+    #data = pd.read_csv('./data.csv')
+    data = pd.read_csv('./data_balanced.csv')
     data = data.sample(frac= 1)
 
 
