@@ -222,6 +222,27 @@ def aggregate_events_for_item(df, unique_items):
     # print(f"Number of items included: {count}\n")
     return item_dfs
 
+# given patient-specific event df, aggregate unique items from events df and return aggregated dfs for each item
+def aggregate_events_for_item_bin(df, unique_items, items_excluded):
+    # print(f"df length: {len(df)}")
+    item_dfs = []
+    count = 0
+    for item in unique_items:
+        if item not in items_excluded:
+            df_item = df[df['ITEMID'] == item]
+            if df_item.empty:
+                # append a empty df
+                item_dfs.append(pd.DataFrame())
+            else:
+                item_dfs.append(df_item)
+                count += len(df_item)
+            # print(f"Number of events for item {item}: {df_item.shape[0]}")
+            # print(df_item.head(5))
+    # print(f"Number of unique items: {len(unique_items)}")
+    # print(f"Number of items excluded: {len(unique_items) - count}")
+    # print(f"Number of items included: {count}\n")
+    return item_dfs
+
 # given patient-time-specific df, calculate the average of "VALUE" column
 def column_average(df, column_name):
     return df[column_name].mean()
