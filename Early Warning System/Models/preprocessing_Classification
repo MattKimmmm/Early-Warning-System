@@ -147,6 +147,8 @@ balanced_df = balanced_df.sample(frac=1, random_state=42).reset_index(drop=True)
 
 print("Class counts after balancing:", balanced_df['TARGET'].value_counts())
 
+
+
 # Save the balanced DataFrame back to a CSV if needed
 balanced_df.to_csv('./data_balanced.csv', index=False)
 
