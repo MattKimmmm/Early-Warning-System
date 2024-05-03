@@ -441,9 +441,9 @@ def aggregate_events_output_lab_bin(keyword, num_bins):
     # print(df_lab_patient.head(5))
 
     print("For outputevents:")
-    df_output_window, items_excluded_output = assign_windows(df_output_patient, df_output_unique, num_bins)
+    df_output_window, items_included_output = assign_windows(df_output_patient, df_output_unique, num_bins)
     print("For labevents")
-    df_lab_window, items_excluded_lab = assign_windows(df_lab_patient, df_lab_unique, num_bins)
+    df_lab_window, items_included_lab = assign_windows(df_lab_patient, df_lab_unique, num_bins)
 
     # merge the two resulting dfs, include patients that are present in both
     patient_output = split_by_patients(df_output_patient)
@@ -459,7 +459,7 @@ def aggregate_events_output_lab_bin(keyword, num_bins):
 
     # aggregate args for multiprocessing
     for patient in patient_output:
-        args = (patient, df_output_unique, num_bins, df_output_window, items_excluded_output)
+        args = (patient, df_output_unique, num_bins, df_output_window, items_included_output)
         args_list_output.append(args)
 
     with Pool(processes=8) as pool:
@@ -487,7 +487,7 @@ def aggregate_events_output_lab_bin(keyword, num_bins):
 
     # aggregate args for multiprocessing
     for patient in patient_lab:
-        args = (patient, df_lab_unique, num_bins, df_lab_window, items_excluded_lab)
+        args = (patient, df_lab_unique, num_bins, df_lab_window, items_included_lab)
         args_list_lab.append(args)
 
     with Pool(processes=8) as pool:
@@ -507,8 +507,10 @@ def aggregate_events_output_lab_bin(keyword, num_bins):
     # print(input)
     save_to_npy(input_lab, f'input_{keyword}_lab_{num_bins}bin')
 
+    return df_output_window, items_included_output, df_lab_window, items_included_lab
+
 # aggregate events into hourly bins for negative samples
-def aggregate_events_output_lab_bin_negative(keyword, num_bins):
+def aggregate_events_output_lab_bin_negative(keyword, num_bins, df_output_window, items_included_output, df_lab_window, items_included_lab):
     # load dataframes
     df_patients = load_from_csv(f'patients_{keyword}_neg')
     # [df_chart_event, df_output_event, df_lab_icu_specific] = load_from_csv_multiple([f'chart_events_{keyword}', f'output_events_{keyword}', f'lab_icu_specific_{keyword}'])
@@ -545,10 +547,10 @@ def aggregate_events_output_lab_bin_negative(keyword, num_bins):
     unique_column(df_lab_patient, "df_lab_patient")
     # print(df_lab_patient.head(5))
 
-    print("For outputevents:")
-    df_output_window, items_excluded_output = assign_windows(df_output_patient, df_output_unique, num_bins)
-    print("For labevents")
-    df_lab_window, items_excluded_lab = assign_windows(df_lab_patient, df_lab_unique, num_bins)
+    # print("For outputevents:")
+    # df_output_window, items_excluded_output = assign_windows(df_output_patient, df_output_unique, num_bins)
+    # print("For labevents")
+    # df_lab_window, items_excluded_lab = assign_windows(df_lab_patient, df_lab_unique, num_bins)
 
     # merge the two resulting dfs, include patients that are present in both
     patient_output = split_by_patients(df_output_patient)
@@ -564,7 +566,7 @@ def aggregate_events_output_lab_bin_negative(keyword, num_bins):
 
     # aggregate args for multiprocessing
     for patient in patient_output:
-        args = (patient, df_output_unique, num_bins, df_output_window, items_excluded_output)
+        args = (patient, df_output_unique, num_bins, df_output_window, items_included_output)
         args_list_output.append(args)
 
     with Pool(processes=8) as pool:
@@ -592,7 +594,7 @@ def aggregate_events_output_lab_bin_negative(keyword, num_bins):
 
     # aggregate args for multiprocessing
     for patient in patient_lab:
-        args = (patient, df_lab_unique, num_bins, df_lab_window, items_excluded_lab)
+        args = (patient, df_lab_unique, num_bins, df_lab_window, items_included_lab)
         args_list_lab.append(args)
 
     with Pool(processes=8) as pool:
@@ -676,7 +678,7 @@ def patient_specifics(args):
 
 def patient_specifics_bin(args):
     # print("patient_specifics_bin")
-    patient, df_unique, num_bins, df_output_window, items_excluded = args
+    patient, df_unique, num_bins, df_output_window, items_included = args
     # print(f"df_unique shape: {df_unique.shape}")
 
     since = time.time()
@@ -698,12 +700,14 @@ def patient_specifics_bin(args):
         count = 0
 
         if times_df.empty:
-            if len(items_excluded) == 0:
-                unique_item_aggregated = [0] * len(df_unique)
-            else:
-                unique_item_aggregated = [0] * (len(df_unique) - len(items_excluded))
+            # if len(items_excluded) == 0:
+            #     unique_item_aggregated = [0] * len(df_unique)
+            # else:
+            #     unique_item_aggregated = [0] * (len(df_unique) - len(items_excluded))
+
+            unique_item_aggregated = [0] * (len(items_included))
         else:
-            items_dfs = aggregate_events_for_item_bin(times_df, df_unique, items_excluded)
+            items_dfs = aggregate_events_for_item_bin(times_df, df_unique, items_included)
             # print(items_dfs)
             # print(f"items_dfs length: {len(items_dfs)}")
             for item_df in items_dfs:
@@ -715,19 +719,26 @@ def patient_specifics_bin(args):
                     # print(f"Columns in item_df: {item_df.columns}")
                     item_df_numeric = pd.to_numeric(item_df["VALUE"], errors='coerce')
                     # print(f"item_df_numeric:\n{item_df_numeric}")
+                    # Replace NaN values with 0
+                    item_df_numeric = item_df_numeric.fillna(0)
                     quantile_values = []
+                    mean_quantile_value = 0
 
                     if item_name in df_output_window:
                         bins = df_output_window[item_name]
                         if bins is not None:
                             # Map values to their respective quantile values
-                            for value in item_df_numeric.dropna():
+                            for value in item_df_numeric:
                                 bin_index = np.digitize(value, bins, right=True)
                                 quantile_value = bin_index / len(bins)
                                 quantile_values.append(quantile_value)
+                            
+                            mean_quantile_value = np.mean(quantile_values) if quantile_values else 0
+                        
+                        else:
+                            mean_quantile_value = np.mean(item_df_numeric)
 
                     # Calculate the mean of the quantile values or use 0 if empty
-                    mean_quantile_value = np.mean(quantile_values) if quantile_values else 0
                     unique_item_aggregated.append(mean_quantile_value)
                     count += 1
 
@@ -902,12 +913,18 @@ def create_dataset_bin(keyword, batch_size, random_seed, num_bins) :
 # given item aggregation df and a list of unique items, and number of bins, create quantile-based window
 def assign_windows(all_item, unique_item_list, num_bins):
     quantile_window = {}
-    items_excluded = []
+    items_included = []
 
     for i, item in enumerate(unique_item_list):
         # Filter the DataFrame for the current item
         item_data = all_item[all_item['ITEMID'] == item]  # Replace 'item_column' with the actual column name
         item_df_numeric = pd.to_numeric(item_data["VALUE"], errors='coerce')
+
+        # Replace NaN values with 0
+        item_df_numeric = item_df_numeric.fillna(0)
+
+        if item_df_numeric.empty:
+            item_df_numeric = pd.Series([0])
 
             # Only proceed if there are enough unique values
         if len(item_df_numeric.unique()) >= num_bins:
@@ -915,13 +932,27 @@ def assign_windows(all_item, unique_item_list, num_bins):
                 # Calculate quantile bins without directly modifying the original DataFrame
                 quantile_bin, bins = pd.qcut(item_df_numeric, q=num_bins, retbins=True, labels=False, duplicates='drop')
                 quantile_window[item] = bins  # Store bins
+                items_included.append(item)
             except ValueError as e:
                 print(f"Error processing item {item}: {e}")
-                items_excluded.append(item)
         else:
             # Not enough unique values to create the desired number of bins
-            items_excluded.append(item)
+            quantile_window[item] = []
+            items_included.append(item)
 
-    print(f"{len(items_excluded)} items were excluded from {len(unique_item_list)} unique items.")
+    print(f"{len(items_included)} items were included from {len(unique_item_list)} unique items.")
 
-    return quantile_window, items_excluded
+    return quantile_window, items_included
+
+def aggregate_bins(keyword, nums_bin, batch_size, random_seed):
+
+    for num in nums_bin:
+        print(f"Aggregating events for {keyword}, with {num} bins")
+        since = time.time()
+        df_output_window, items_included_output, df_lab_window, items_included_lab = aggregate_events_output_lab_bin(keyword, num)
+        aggregate_events_output_lab_bin_negative(keyword, num, df_output_window, items_included_output, df_lab_window, items_included_lab)
+        print(f"aggregate_events took {time.time() - since}")
+
+        create_dataset_bin(keyword, batch_size, random_seed, num)
+
+    

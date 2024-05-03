@@ -101,10 +101,31 @@ Number of output events with cardiac arrest: 129946
 Number of unique patients with cardiac arrest: 1274
 Number of lab events with cardiac arrest: 389597
 For outputevents:
-990 items were excluded from 1153 unique items.
-For labevents
-223 items were excluded from 511 unique items.
-Number of common patients: 1193
-df1_common length: 1193
-df2_common length: 1193
-Starting Aggregation for Output Events for 1193 patients
+Traceback (most recent call last):
+  File "/home/paperspace/Desktop/Early-Warning-System/Preprocessing/main.py", line 55, in <module>
+    aggregate_bins("cardiac arrest", NUMS_BIN, BATCH_SIZE, RANDOM_SEED)
+  File "/home/paperspace/Desktop/Early-Warning-System/Preprocessing/preprocess.py", line 936, in aggregate_bins
+    df_output_unique, df_lab_unique = aggregate_events_output_lab_bin(keyword, num)
+  File "/home/paperspace/Desktop/Early-Warning-System/Preprocessing/preprocess.py", line 444, in aggregate_events_output_lab_bin
+    df_output_window, items_excluded_output = assign_windows(df_output_patient, df_output_unique, num_bins)
+  File "/home/paperspace/Desktop/Early-Warning-System/Preprocessing/preprocess.py", line 918, in assign_windows
+    quantile_bin, bins = pd.qcut(item_df_numeric, q=num_bins, retbins=True, labels=False, duplicates='drop')
+  File "/home/paperspace/.local/lib/python3.9/site-packages/pandas/core/reshape/tile.py", line 376, in qcut
+    bins = np.quantile(x_np, quantiles)
+  File "<__array_function__ internals>", line 180, in quantile
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/lib/function_base.py", line 4412, in quantile
+    return _quantile_unchecked(
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/lib/function_base.py", line 4424, in _quantile_unchecked
+    r, k = _ureduce(a,
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/lib/function_base.py", line 3725, in _ureduce
+    r = func(a, **kwargs)
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/lib/function_base.py", line 4593, in _quantile_ureduce_func
+    result = _quantile(arr,
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/lib/function_base.py", line 4699, in _quantile
+    take(arr, indices=-1, axis=DATA_AXIS)
+  File "<__array_function__ internals>", line 180, in take
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/core/fromnumeric.py", line 190, in take
+    return _wrapfunc(a, 'take', indices, axis=axis, out=out, mode=mode)
+  File "/home/paperspace/.local/lib/python3.9/site-packages/numpy/core/fromnumeric.py", line 57, in _wrapfunc
+    return bound(*args, **kwds)
+IndexError: cannot do a non-empty take from an empty axes.

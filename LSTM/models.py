@@ -28,6 +28,12 @@ class LSTM_base(nn.Module):
         # a linear layer to map outputs[hidden_dim] to vocab size[vocab_size]
         self.linear = nn.Linear(hidden_dim, 1)
 
+        for name, param in self.lstm.named_parameters():
+            if 'weight_ih' in name:
+                torch.nn.init.xavier_uniform_(param.data)
+            elif 'weight_hh' in name:
+                torch.nn.init.orthogonal_(param.data)
+
     def init_state(self, batch_size):
         
         # Your code goes here
@@ -41,7 +47,10 @@ class LSTM_base(nn.Module):
 
     def forward(self, inputs, states):
         logits, states = self.lstm(inputs, states)
+        # print(f'Logits after LSTM: {logits}')
         logits = self.linear(logits)
+        # print(f'Logits after Linear: {logits}')
         probs = torch.sigmoid(logits)
+        # print(f'Final output probabilities: {probs}')
 
         return probs, states

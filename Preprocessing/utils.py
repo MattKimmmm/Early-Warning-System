@@ -124,7 +124,7 @@ def load_np(file_name):
     file_path = os.path.join(script_dir, "../data", "input", file_name)
     # print(file_path)
 
-    loaded = np.load(file_path)
+    loaded = np.load(file_path, allow_pickle=True)
     print(f"Loaded {file_name}")
     print(f"shape: {loaded.shape}")
     # print(loaded)
@@ -223,24 +223,35 @@ def aggregate_events_for_item(df, unique_items):
     return item_dfs
 
 # given patient-specific event df, aggregate unique items from events df and return aggregated dfs for each item
-def aggregate_events_for_item_bin(df, unique_items, items_excluded):
+def aggregate_events_for_item_bin(df, unique_items, items_included):
     # print(f"df length: {len(df)}")
     item_dfs = []
     count = 0
-    for item in unique_items:
-        if item not in items_excluded:
-            df_item = df[df['ITEMID'] == item]
-            if df_item.empty:
-                # append a empty df
-                item_dfs.append(pd.DataFrame())
-            else:
-                item_dfs.append(df_item)
-                count += len(df_item)
+    # for item in unique_items:
+    #     if item not in items_excluded:
+    #         df_item = df[df['ITEMID'] == item]
+    #         if df_item.empty:
+    #             # append a empty df
+    #             item_dfs.append(pd.DataFrame())
+    #         else:
+    #             item_dfs.append(df_item)
+    #             count += len(df_item)
             # print(f"Number of events for item {item}: {df_item.shape[0]}")
             # print(df_item.head(5))
     # print(f"Number of unique items: {len(unique_items)}")
     # print(f"Number of items excluded: {len(unique_items) - count}")
     # print(f"Number of items included: {count}\n")
+
+    # items_included
+    for item in items_included:
+        df_item = df[df['ITEMID'] == item]
+        if df_item.empty:
+            # append a empty df
+            item_dfs.append(pd.DataFrame())
+        else:
+            item_dfs.append(df_item)
+            count += len(df_item)
+
     return item_dfs
 
 # given patient-time-specific df, calculate the average of "VALUE" column
