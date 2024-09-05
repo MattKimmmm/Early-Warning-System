@@ -1,2 +1,6 @@
 data/*
 demo/*
+models/*
+
+*.out
+*.pyc
