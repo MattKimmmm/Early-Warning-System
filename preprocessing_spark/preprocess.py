@@ -1,9 +1,9 @@
 
-from pyspark.sql.functions import col, row_number, rand, lit, min, max, sum, mean, count, avg, when
+from pyspark.sql.functions import col, row_number, rand, lit, min, max, sum, mean, count, avg, when, to_timestamp
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType
 
-import time
+import time, datetime
 
 from utils import (read_csv_spark, write_csv_spark, df_analytics, analyze_df, train_test_stratified,
                    get_icd_codes)
@@ -114,7 +114,7 @@ def full_event_analytics(events_concat_path, spark):
 
     
 # Given aggregated unique item df, create two new dfs with rows with values in numerical vs string
-def events_in_num_string(unique_item_df_path, spark):
+def events_in_num_string(unique_item_df_path, spark, keyword):
     unique_item_df = read_csv_spark(unique_item_df_path, spark)
 
     events_numerical_df = unique_item_df.filter(col('RATIO') >= 0.9)
@@ -131,8 +131,8 @@ def events_in_num_string(unique_item_df_path, spark):
     print(f"From total of {total_count} unique items, {numerical_count} items were included as numerical and {string_count} items were included as string. {excluded_count} items were excluded due to its ambiguity in type representation.")
     print("Items with string values will be further processed to create a word embedding to assign numerical vectors to these values.")
 
-    write_csv_spark(events_numerical_df, '../data/processed/events_numerical_df')
-    write_csv_spark(events_string_df, '../data/processed/events_string_df')
+    write_csv_spark(events_numerical_df, f'../data/processed/events_numerical_df')
+    write_csv_spark(events_string_df, f'../data/processed/events_string_df')
 
 # Join the whole event table with extracted ITEMIDs in events_string_df to prepare word embedding
 def all_events_in_string(events_string_df_path, events_concat_df_path, spark):
@@ -165,7 +165,7 @@ def all_events_in_string(events_string_df_path, events_concat_df_path, spark):
 def all_events_in_numeric(events_numerical_df_path, events_concat_df_path, spark):
     events_numeric_df = read_csv_spark(events_numerical_df_path, spark)
     events_concat_df = read_csv_spark(events_concat_df_path, spark)
-    print("Schema of events_string_df:")
+    print("Schema of events_numeric_df:")
     events_numeric_df.printSchema()
     print("Schema of events_concat_df:")
     events_concat_df.printSchema()
@@ -184,10 +184,142 @@ def all_events_in_numeric(events_numerical_df_path, events_concat_df_path, spark
     all_events_numeric = events_numeric_df.join(events_concat_df, on='ITEMID', how='left')
     print("DataFrames joined successfully.")
     
-    df_analytics(all_events_numeric, 'all_events_string')
+    df_analytics(all_events_numeric, 'all_events_numeric')
 
     write_csv_spark(all_events_numeric, '../data/processed/all_events_numeric_df')
 
+
+# given deterioration keyword and all-event table, extract deterioration-specific items
+def extract_deterioration(keyword, spark, seed):
+    since = time.time()
+    icd_codes = get_icd_codes(keyword, spark)
+
+    events_concat_df = read_csv_spark('../data/processed/events_concat.csv', spark)
+    df_analytics(events_concat_df, 'events_concat_df', count=True)
+
+    # delete duplicate rows
+    patients_subject_ids = patients_subject_ids.dropDuplicates()
+    df_analytics(patients_subject_ids, 'patients_df - after dropping duplicates', True)
+
+    diagnoses_icd_df = read_csv_spark('../data/DIAGNOSES_ICD.csv', spark)
+    diagnoses_icd_subject_id = diagnoses_icd_df.select('SUBJECT_ID', 'ICD9_CODE')
+    df_analytics(diagnoses_icd_subject_id, 'diagnoses_icd_subject_id', True)
+
+    # get SUBJECT_ID's of patients diagnosed with the given deterioration
+    icd_subject_df = icd_codes.join(diagnoses_icd_subject_id, on='ICD9_CODE', how='left').drop(
+        'ROW_ID', 'HADM_ID', 'SEQ_NUM'
+    )
+    # negative examples
+    icd_subject_df_neg = patients_subject_ids.join(icd_subject_df, on='SUBJECT_ID', how='left_anti')
+    
+    # df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - first join', count=True)
+    # icd_subject_df_neg = icd_subject_df_neg.dropDuplicates(['SUBJECT_ID'])
+    # df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - dropped duplicates', count=True)
+
+    # keep the same number of patients for pos / neg samples
+    sampling_fraction = icd_subject_df.count() / icd_subject_df_neg.count()
+    icd_subject_df_neg = icd_subject_df_neg.sample(False, sampling_fraction, seed=seed)
+    df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - first join', True)
+
+    icd_subject_df_neg = icd_subject_df_neg.join(diagnoses_icd_subject_id, on='SUBJECT_ID', how='left')
+    df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - second join', True)
+
+    icd_subject_df_neg = icd_subject_df_neg.dropDuplicates(['SUBJECT_ID'])
+    df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - dropped duplicates', True)
+
+    df_analytics(icd_subject_df, 'icd_subject_df', count=True)
+    df_analytics(icd_subject_df_neg, 'icd_subject_df_neg - final', count=True)
+
+    # icd_codes_neg = d_icd_diagnoses_df.select("ICD9_CODE").join(icd_codes, on='ICD9_CODE', how='left_anti')
+    # sampling_fraction = icd_codes.count() / icd_codes_neg.count()
+    # icd_codes_neg = icd_codes_neg.sample(False, sampling_fraction, seed=seed)
+
+    # patients_deterioration_df = icd_subject_df.join(patients_df, on='SUBJECT_ID', how='left').drop(
+    #     'DOD', 'DOD_HOSP', 'DOD_SSN', 'EXPIRE_FLAG'
+    # )
+    # patients_deterioration_neg_df = icd_subject_df_neg.join(patients_df, on='SUBJECT_ID', how='left').drop(
+    #     'DOD', 'DOD_HOSP', 'DOD_SSN', 'EXPIRE_FLAG'
+    # )
+    # df_analytics(patients_deterioration_df, 'patients_deterioration_df', count=True)
+    # df_analytics(patients_deterioration_neg_df, 'patients_deterioration_neg_df', count=True)
+
+    extracted_events_df = icd_subject_df.join(events_concat_df, on='SUBJECT_ID', how='left')
+    extracted_events_neg_df = icd_subject_df_neg.join(events_concat_df, on='SUBJECT_ID', how='left')
+    df_analytics(extracted_events_df, 'extracted_events_df', count=True)
+    df_analytics(extracted_events_neg_df, 'extracted_events_neg_df', count=True)
+
+    write_csv_spark(extracted_events_df, f'../data/processed/{keyword}/extracted_events_df')
+    write_csv_spark(extracted_events_neg_df, f'../data/processed/{keyword}/extracted_events_neg_df')
+
+    print(f"extract_deterioration completed successfully. Time taken: {datetime.timedelta(seconds=(time.time() - since))}s.")
+
+# Given events_numeric_df, events_string_df, and deterioration-specific df, 
+def aggregate_events(events_numeric_df_path, events_string_df_path, keyword, spark):
+    since = time.time()
+    
+    extracted_events_df_path = f'../data/processed/{keyword}/extracted_events_df'
+    extracted_events_neg_df_path = f'../data/processed/{keyword}/extracted_events_neg_df'
+
+    print(extracted_events_df_path)
+    print(extracted_events_neg_df_path)
+    
+    events_numeric_df = read_csv_spark(events_numeric_df_path, spark).drop('NUM_NUMERIC', 'NUM_STRING', 'RATIO')
+    events_string_df = read_csv_spark(events_string_df_path, spark).drop('NUM_NUMERIC', 'NUM_STRING', 'RATIO')
+    extracted_events_df = read_csv_spark(extracted_events_df_path, spark)
+    extracted_events_neg_df = read_csv_spark(extracted_events_neg_df_path, spark)
+
+    # positive samples into numeric/string
+    pos_numeric = events_numeric_df.join(extracted_events_df, on='ITEMID',how='left')
+    pos_string = events_string_df.join(extracted_events_df, on='ITEMID', how='left')
+    # negative samples
+    neg_numeric = events_numeric_df.join(extracted_events_neg_df, on='ITEMID', how='left')
+    neg_string = events_string_df.join(extracted_events_neg_df, on='ITEMID', how='left')
+
+    # df_analytics(pos_numeric, 'pos_numeric', True)
+    # df_analytics(pos_string, 'pos_string', True)
+    # df_analytics(neg_numeric, 'neg_numeric', True)
+    # df_analytics(neg_string, 'neg_string', True)
+
+    write_csv_spark(pos_numeric, f'../data/processed/{keyword}/pos_numeric')
+    write_csv_spark(pos_string, f'../data/processed/{keyword}/pos_string')
+    write_csv_spark(neg_numeric, f'../data/processed/{keyword}/neg_numeric')
+    write_csv_spark(neg_string, f'../data/processed/{keyword}/neg_string')
+
+    print(f"aggregate_events completed successfully. Time taken: {datetime.timedelta(seconds=(time.time() - since))}s.")
+
+# data cleaning for row event data for a specific deterioration
+def clean_events(spark, keyword):
+    # load PATIENTS and ICUSTAY tables
+    # patients_df = read_csv_spark('../data/PATIENTS.csv', spark)
+    # patients_subject_ids = patients_df.select('SUBJECT_ID')
+    # df_analytics(patients_df, 'patients_df', True)
+
+    icustay_df = read_csv_spark('../data/ICUSTAYS.csv', spark)
+    icustay_times_df = icustay_df.select('SUBJECT_ID', 'INTIME', 'OUTTIME', 'LOS').filter('LOS <= 3')
+    icustay_times_df = icustay_times_df.withColumn('INTIME', to_timestamp(col('INTIME')))
+    icustay_times_df = icustay_times_df.withColumn('OUTTIME', to_timestamp(col('OUTTIME')))
+
+    window_spec = Window.partitionBy('SUBJECT_ID').orderBy(col('OUTTIME').desc())
+    icustay_times_df = icustay_times_df.withColumn('ROW_NUMBER', row_number().over(window_spec))
+    icustay_times_df = icustay_times_df.filter(col('ROW_NUMBER') == 1).drop('ROW_NUMBER')
+
+    df_analytics(icustay_times_df, 'icustay_times_df - processed', True)
+
+    # load processed dataframes
+    pos_numeric_df = read_csv_spark(f'../data/processed/{keyword}/pos_numeric', spark)
+    pos_string_df = read_csv_spark(f'../data/processed/{keyword}/pos_string', spark)
+    neg_numeric_df = read_csv_spark(f'../data/processed/{keyword}/neg_numeric', spark)
+    pos_string_df = read_csv_spark(f'../data/processed/{keyword}/neg_string', spark)
+
+    # create final datasets, devise the model structure (double LSTM?)
+    # string/numerical values -> seperate/aggregated trainings
+
 # Data preprocessing in one
 def preprocess_data(keyword, spark):
-    icd_codes = get_icd_codes(keyword, spark)
+
+    # extract keyword(deterioration)-specific items from all event
+    
+
+    write_csv_spark
+
+

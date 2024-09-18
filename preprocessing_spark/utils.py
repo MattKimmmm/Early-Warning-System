@@ -16,7 +16,7 @@ def read_csv_spark(file_path, spark, header=True, infer_schema=True):
 # save spark df as csv file
 def write_csv_spark(df, file_path, header=True):
     try:
-        df.write.format('csv').save(file_path, header=header)
+        df.write.format('csv').mode('overwrite').save(file_path, header=header)
     except Exception as e:
         print(f'Error in write_csv_spark: {e}')
 
@@ -168,17 +168,33 @@ def rename_keys_triplet_error(example):
     }
 
 # Function to read CSV and get ICD codes based on a keyword search
-def get_icd_codes(keyword, spark, file='../data/D_ICD_DIAGNOSES.csv'):
+def get_icd_codes(keyword, spark):
     # Read the CSV file into a PySpark DataFrame
-    df = spark.read.csv(file, header=True, inferSchema=True)
+    d_icd_diagnoses_df = read_csv_spark('../data/D_ICD_DIAGNOSES.csv', spark)
+    # diagnoses_icd_df = read_csv_spark('../data/DIAGNOSES_ICD.csv', spark)
     
     # Filter the DataFrame where either SHORT_TITLE or LONG_TITLE contains the keyword (case-insensitive)
-    icd_codes = df.filter(
+    icd_codes = d_icd_diagnoses_df.filter(
         (lower(col("SHORT_TITLE")).contains(keyword.lower())) | 
         (lower(col("LONG_TITLE")).contains(keyword.lower()))
     ).select("ICD9_CODE")
-    
+
+    df_analytics(icd_codes, 'icd_codes', count=True)
+
+    ##### Focus on same number of PATIENTS, not ICD9_CODE!!
+
+    # icd_codes_neg = d_icd_diagnoses_df.select("ICD9_CODE").join(icd_codes, on='ICD9_CODE', how='left_anti')
+    # sampling_fraction = icd_codes.count() / icd_codes_neg.count()
+    # icd_codes_neg = icd_codes_neg.sample(False, sampling_fraction, seed=seed)
+
+    # df_analytics(icd_codes_neg, 'icd_codes_neg', count=True)
+
+    # icd_subject_neg_df = icd_codes_neg.join(diagnoses_icd_df, on='ICD9_CODE', how='left').drop(
+    #     'ROW_ID', 'HADM_ID', 'SEQ_NUM'
+    # )
+
     # Show the first 5 ICD codes
-    df_analytics(icd_codes, f'icd_codes for {keyword}', count=True)
+    # df_analytics(icd_subject_df, f'icd_codes for {keyword}', count=True)
+    # df_analytics(icd_subject_neg_df, f'icd_codes for negative {keyword}', count=True)
     
     return icd_codes

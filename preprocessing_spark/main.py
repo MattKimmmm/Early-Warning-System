@@ -4,13 +4,13 @@ from sentence_transformers import (
 
 from preprocess import (
     patients_events, process_items, process_train, events_in_num_string, all_events_in_string,
-    all_events_in_numeric
+    all_events_in_numeric, extract_deterioration, aggregate_events, clean_events
 )
 
 from finetune import (create_dataset_finetune, create_dataset_finetune_json, finetune_embedding_train, 
                       process_dataset)
 
-from utils import read_csv_spark
+from utils import read_csv_spark, get_icd_codes
 
 from pyspark.sql import SparkSession
 
@@ -52,7 +52,15 @@ BATCH_SIZE = 64
 #     10, 10, subset_repartition=True
 # )
 
-all_events_in_numeric('../data/processed/events_numerical_df', '../data/processed/events_concat.csv', spark)
+# all_events_in_numeric('../data/processed/events_numerical_df', '../data/processed/events_concat.csv', spark)
 
-read_csv_spark('../data/processed/all_events_numeric_df', spark)
-read_csv_spark('../data/processed/all_events_string_df', spark)
+# read_csv_spark('../data/processed/all_events_numeric_df', spark)
+# read_csv_spark('../data/processed/all_events_string_df', spark)
+
+# get_icd_codes('cardiac arrest', spark, SEED)
+
+# extract_deterioration('cardiac arrest', spark, SEED)
+
+# aggregate_events('../data/processed/events_numerical_df', '../data/processed/events_string_df', 'cardiac arrest', spark)
+
+clean_events(spark, 'cardiac arrest')
